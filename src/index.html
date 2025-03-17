@@ -10,10 +10,74 @@
 <body>
     <div id="dhis-header-bar"></div>
 
-    <div id="mainView">
-        <p>Content goes here...</p>
+    <div class="mainView" id="tabs">        
+        <ul>
+            <li><a href="#tabOverview">Overview</a></li>
+            <li><a href="#tabOutlier">Outliers</a></li>
+            <li><a href="#tabCompleteness">Completeness</a></li>
+        </ul>
+    
 
-        <button onclick="helloWorld()">Hello</button>
+        <div id="tabOverview">
+            <button id="buttonInit" class="standardButton" disabled onclick="initialise()">Initialise</button>
+
+            <div id="configuredOutliers"></div>
+        </div>
+
+
+        <div id="tabOutlier"> 
+            <h1>Configure metadata for outlier analysis</h1>
+            <p>Using predictors, data elements and indicators, you can configure DHIS2 to provide outlier analysis of 
+                individual data elements that can be used in visualizations and on dashboards. You can read more
+                <a href="https://docs.dhis2.org/en/implement/data-quality/analysis.html#statistical-outliers-in-time-series">here</a>.
+            </p>
+
+            <h3>Selection</h3>
+            <p>All fields are required!</p>
+            <div class="selection">
+                <label>Data set - used to filter data elements</label><br>
+                <select id="selectDataSet" class="dataSelect"></select>
+            </div>
+            <div class="selection">
+                <label>Data element to configure outlier checks for</label></br>
+                <select id="selectDataElement" class="dataSelect"></select>
+            </div>
+            <div class="selection">
+                <label>Orgunit level at which data is collected - required for configuration of predictors</label><br>
+                <select id="selectOuLevel" class="dataSelect"></select>
+            </div>
+            <div class="selection">
+                <label>Number of standard deviations from the mean to use as outlier threshold</label></br>
+                <input id="selectThreshold" class="dataSelect" type="number" min="2" max="4" step="0.1" value="3.0" pattern="\d\.\d">
+            </div>
+            
+            <button id="buttonPreview" class="standardButton" disabled id onclick="previewOutlier()">Preview</button>
+
+
+            <div id="previewSection" style="display: none;">
+                <h3>Preview</h3>
+                <h4>Data elements</h4>
+                <div id="dataElementPreview"></div>
+                <h4>Predictors</h4>
+                <div id="predictorPreview"></div>
+                <h4>Indicators</h4>
+                <div id="indicatorPreview"></div>
+
+                <button id="buttonImport" class="standardButton" disabled id onclick="importOutlier()">Import 🤞</button>
+            </div>
+
+
+            <div id="resultSection" style="display: none;">
+                <h3>Result</h3>
+                <div id="resultTableContainer"></div>
+            </div>
+
+        </div>
+
+        <div id="tabCompleteness">
+            <p>Maybe later..</p>
+        </div>
+        
     </div>
 </body>
 

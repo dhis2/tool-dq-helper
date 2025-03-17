@@ -6,3 +6,26 @@ body {
 #mainView {
     margin: 8px;
 }
+
+.generalTable table, th, td {
+	border: 1px solid gray;
+	border-collapse: collapse;
+}
+
+.dataSelect {
+	min-width: 600px;
+	max-width: 800px;
+	margin-top: 3px;
+}
+
+.standardButton {
+	margin-top: 6px;
+}
+
+.selection {
+	margin-bottom: 12px;
+}
+
+.selection label {
+	font-size: small;
+}
