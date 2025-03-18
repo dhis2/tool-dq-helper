@@ -16,28 +16,27 @@ var currentImport = {};
 
 //Check if basic config exist - DQ UG, datastore, metadata groups
 async function load() {
-
     $("#tabs").tabs();
 
     var dataStore = await d2Get("/api/dataStore");
 
     if (dataStore && dataStore.includes("dqConfig")) {
-        
         baseConfig = await d2Get("/api/dataStore/dqConfig/baseConfig");
 
         $("#buttonPreview").attr("disabled", true);
-        $("#buttonInit").attr("disabled", true);
 
         listConfig();
-    }
-    else {
-        $("#buttonInit").attr("disabled", false);
+    } else {
+        $("#initialiseModal").show();
     }
 
     await prepOutlierInputs();
     $("#selectDataSet, #selectDataElement, #selectOuLevel, #selectThreshold").on("change", previewPossible);
 }
 
+window.closeApp = function() {
+    window.location.href = "../..";
+}
 
 //Returns true if required selection for preview is possible, otherwise false
 function previewPossible() {
@@ -109,6 +108,7 @@ async function updateDataElements() {
         }
     }
 }
+
 
 function hasObject(list, prop, val) {
     for (var item of list) {

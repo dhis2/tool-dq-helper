@@ -10,6 +10,15 @@
 <body>
     <div id="dhis-header-bar"></div>
 
+    <div id="initialiseModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Initialise Data Store</h2>
+            <p>The basic dataStore structure must be initialised for the app to function correctly.</p>
+            <button onclick="initialise()">Initialise</button>
+            <button onclick="closeApp()">Cancel</button>
+        </div>
+    </div>
+
     <div class="mainView" id="tabs">        
         <ul>
             <li><a href="#tabOverview">Overview</a></li>
@@ -19,8 +28,6 @@
     
 
         <div id="tabOverview">
-            <button id="buttonInit" class="standardButton" disabled onclick="initialise()">Initialise</button>
-
             <div id="configuredOutliers"></div>
         </div>
 
