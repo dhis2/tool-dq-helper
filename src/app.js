@@ -75,37 +75,37 @@ async function prepOutlierInputs() {
     return false;
 }
 
+
 async function updateDataElements() {
-    var dataSetId = $("#selectDataSet").find(":selected").val();
+    try {
+        const dataSetId = $("#selectDataSet").val();
+        
+        const dataElementsResponse = await d2Get(`/api/dataElements?filter=dataSetElements.dataSet.id:like:${dataSetId}&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id&paging=false`);
+        const dataElements = [...dataElementsResponse["dataElements"]].sort((a, b) => b.name.localeCompare(a.name));
 
-    var data = await d2Get("/api/dataElements?filter=dataSetElements.dataSet.id:like:" + dataSetId + "&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id&paging=false");
-    var dataElements = data["dataElements"];
-    dataElements.sort((a, b) => a.name - b.name);
-    dataElements.reverse();
+        const dataElementIds = dataElements.map(obj => obj.id);
+        const combinedItemsResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:in:[${dataElementIds.join(",")}]&filter=id:like:.&fields=name,id&paging=false`);
+        const combinedItems = [...combinedItemsResponse["dataElementOperands"]].sort((a, b) => b.name.localeCompare(a.name));
+        
+        dataElements.forEach(de => {
+            if (!hasObject(combinedItems, "id", de.id)) {
+                de.name += " (total)";
+                combinedItems.unshift(de);
+            }
+        });
 
-    var dataElementIds = dataElements.map(obj => obj.id);
-    data = await d2Get("/api/dataElementOperands?filter=dataElement.id:in:[" + dataElementIds.join(",") + "]&filter=id:like:.&fields=name,id&paging=false");
-    var combinedItems = data["dataElementOperands"];
-    combinedItems.sort((a, b) => a.name - b.name);
-    
-    for (var de of dataElements) {
-        if (!hasObject(combinedItems, "id", de.id)) {
-            de.name += " (total)";
-            combinedItems.unshift(de);
-        }
-    }
+        const outliersResponse = await d2Get("/api/dataStore/dqConfig/outliers");
+        const outlierIds = outliersResponse.reduce((ids, ol) => ids.concat(Object.keys(ol)), []);
 
-    var htmlCode = "<option value=''>[Select data element]</option>";
-    for (var obj of combinedItems) {
-        htmlCode += "<option value='" + obj.id + "' id='" + obj.id + "'>" + obj.name + "</option>";
-    }
-    $("#selectDataElement").html(htmlCode);
+        const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
+            combinedItems.map(obj => 
+                `<option value='${obj.id}' id='${obj.id}' ${outlierIds.includes(obj.id) ? "disabled" : ""}>${obj.name}</option>`
+            )
+        ).join("");
 
-    let outliers = await d2Get("/api/dataStore/dqConfig/outliers");
-    for (var ol of outliers) {
-        for (var id in ol) {
-            $("#" + id).attr("disabled", true);
-        }
+        $("#selectDataElement").html(dataElementHtml);
+    } catch (error) {
+        showFeedback(`Failed to update data elements: ${error.message}`, false);
     }
 }
 
