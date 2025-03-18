@@ -83,8 +83,8 @@ const templateOutlier = () => {
             {
                 "annualSampleCount": 0,
                 "generator": {
-                    "description": "§NAME§ if §NAME§ <= §NAME§ outlier threshold, else 0",
-                    "displayDescription": "§NAME§ if §NAME§ <= §NAME§ outlier threshold, else 0",
+                    "description": "§NAME§ if <= outlier threshold, else 0",
+                    "displayDescription": "§NAME§ if <= outlier threshold, else 0",
                     "expression": "if(#{§DE_SOURCE§}<=#{§DE_THRESHOLD§}, #{§DE_SOURCE§}, 0)",
                     "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
                     "slidingWindow": false,
@@ -112,8 +112,8 @@ const templateOutlier = () => {
             {
                 "annualSampleCount": 0,
                 "generator": {
-                    "description": "1 if §NAME§ <= §NAME§ outlier threshold, else 0",
-                    "displayDescription": "1 if §NAME§ <= §NAME§ outlier threshold, else 0",
+                    "description": "1 if §NAME§ <= outlier threshold, else 0",
+                    "displayDescription": "1 if §NAME§ <= outlier threshold, else 0",
                     "expression": "if(#{§DE_SOURCE§}<=#{§DE_THRESHOLD§}, 1, 0)",
                     "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
                     "slidingWindow": false,
@@ -141,8 +141,8 @@ const templateOutlier = () => {
             {
                 "annualSampleCount": 0,
                 "generator": {
-                    "description": "1 if §NAME§ > §NAME§ outlier threshold, else 0",
-                    "displayDescription": "1 if §NAME§ > §NAME§ outlier threshold, else 0",
+                    "description": "1 if §NAME§ > outlier threshold, else 0",
+                    "displayDescription": "1 if §NAME§ > outlier threshold, else 0",
                     "expression": "if(#{§DE_SOURCE§}>#{§DE_THRESHOLD§},1, 0)",
                     "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
                     "slidingWindow": false,
@@ -170,8 +170,8 @@ const templateOutlier = () => {
             {
                 "annualSampleCount": 0,
                 "generator": {
-                    "description": "§NAME§ if §NAME§ > §NAME§ outlier threshold, else 0",
-                    "displayDescription": "§NAME§ if §NAME§ > §NAME§ outlier threshold, else 0",
+                    "description": "§NAME§ if > outlier threshold, else 0",
+                    "displayDescription": "§NAME§ if > outlier threshold, else 0",
                     "expression": "if(#{§DE_SOURCE§}>#{§DE_THRESHOLD§}, #{§DE_SOURCE§}, 0)",
                     "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
                     "slidingWindow": false,
