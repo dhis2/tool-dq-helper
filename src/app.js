@@ -36,7 +36,7 @@ async function load() {
 
 window.closeApp = function() {
     window.location.href = "../..";
-}
+};
 
 //Returns true if required selection for preview is possible, otherwise false
 function previewPossible() {
@@ -105,7 +105,7 @@ async function updateDataElements() {
 
         $("#selectDataElement").html(dataElementHtml);
     } catch (error) {
-        showFeedback(`Failed to update data elements: ${error.message}`, false);
+        alert(`Failed to update data elements: ${error.message}`);
     }
 }
 
