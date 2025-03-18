@@ -224,7 +224,7 @@ window.previewOutlier = async function () {
     let metadata = await configureOutlierMetadata(dataElement);
 
     $("#dataElementPreview").html(makeTable(metadata["dataElements"], ["name", "shortName", "description"]));
-    $("#predictorPreview").html(makeTable(metadata["predictors"], ["name", "generator[expression]"]));
+    $("#predictorPreview").html(makeTable(metadata["predictors"], ["name", "shortName", "generator[expression]"]));
     $("#indicatorPreview").html(makeTable(metadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
 
 
@@ -305,7 +305,8 @@ function generateResultsTable(results) {
 async function configureOutlierMetadata(deSource) {
 
     let outlierConfig = {
-        "§NAME§": deSource.name.length > 20 ? deSource.shortName : deSource.name,
+        "§NAME§": deSource.name,
+        "§SHORTNAME§": deSource.shortName.length > 34 ? deSource.shortName.substring(0, 35) : deSource.shortName,
         "§DE_SOURCE§": deSource.id,
         "§COC_DEFAULT§": await defaultCoCId(),
         "§IN_TYPE§": await indicatorTypePercentId(),

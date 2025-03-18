@@ -10,7 +10,7 @@ const templateOutlier = () => {
                 "domainType": "AGGREGATE",
                 "id": "§DE_NOUTLIER_VAL§",
                 "name": "DQ - §NAME§ excluding outliers",
-                "shortName": "§NAME§ excluding outliers",
+                "shortName": "§SHORTNAME§ excl outlier",
                 "valueType": "INTEGER_ZERO_OR_POSITIVE"
             },
             {
@@ -19,7 +19,7 @@ const templateOutlier = () => {
                 "domainType": "AGGREGATE",
                 "id": "§DE_NOUTLIER_COUNT§",
                 "name": "DQ - §NAME§ non-outlier count",
-                "shortName": "§NAME§ non-outlier count",
+                "shortName": "§SHORTNAME§ non-outl count",
                 "valueType": "INTEGER_ZERO_OR_POSITIVE"
             },
             {
@@ -28,7 +28,7 @@ const templateOutlier = () => {
                 "domainType": "AGGREGATE",
                 "id": "§DE_OUTLIER_COUNT§",
                 "name": "DQ - §NAME§ outlier count",
-                "shortName": "§NAME§ outlier count",
+                "shortName": "§SHORTNAME§ outlier count",
                 "valueType": "INTEGER_ZERO_OR_POSITIVE"
             },
             {
@@ -37,7 +37,7 @@ const templateOutlier = () => {
                 "domainType": "AGGREGATE",
                 "id": "§DE_OUTLIER_VAL§",
                 "name": "DQ - §NAME§ outliers",
-                "shortName": "§NAME§ outliers",
+                "shortName": "§SHORTNAME§ outliers",
                 "valueType": "INTEGER_ZERO_OR_POSITIVE"
             },
             {
@@ -46,7 +46,7 @@ const templateOutlier = () => {
                 "domainType": "AGGREGATE",
                 "id": "§DE_THRESHOLD§",
                 "name": "DQ - §NAME§ outlier threshold (mean + §VAL_STDDEV§ SD)",
-                "shortName": "§NAME§ outlier threshold",
+                "shortName": "§SHORTNAME§ outl threshold",
                 "valueType": "INTEGER_ZERO_OR_POSITIVE"
             }
         ],
@@ -63,7 +63,7 @@ const templateOutlier = () => {
                 "name": "DQ - §NAME§ excluding outliers (%)",
                 "numerator": "#{§DE_NOUTLIER_VAL§}",
                 "numeratorDescription": "§NAME§ excluding outliers",
-                "shortName": "§NAME§ excluding outliers (%)"
+                "shortName": "§SHORTNAME§ excl outl (%)"
             },
             {
                 "denominator": "#{§DE_OUTLIER_COUNT§}+#{§DE_NOUTLIER_COUNT§}",
@@ -76,7 +76,7 @@ const templateOutlier = () => {
                 "name": "DQ - §NAME§ values that are outliers (%)",
                 "numerator": "if( isNotNull( #{§DE_OUTLIER_COUNT§}), #{§DE_OUTLIER_COUNT§}, 0)",
                 "numeratorDescription": "§NAME§ outlier count",
-                "shortName": "§NAME§ outliers (%)"
+                "shortName": "§SHORTNAME§ outlier (%)"
             }
         ],
         "predictors": [
@@ -92,7 +92,7 @@ const templateOutlier = () => {
                 },
                 "id": "§PD_NOUTLIER_VAL§",
                 "name": "DQ - §NAME§ excluding outliers",
-                "shortName": "§NAME§ excluding outliers",
+                "shortName": "§SHORTNAME§ excl outliers",
                 "organisationUnitLevels": [
                     {
                         "id": "§OU_LEVEL§"
@@ -121,7 +121,7 @@ const templateOutlier = () => {
                 },
                 "id": "§PD_NOUTLIER_COUNT§",
                 "name": "DQ - §NAME§ non-outlier count",
-                "shortName": "§NAME§ non-outlier count",
+                "shortName": "§SHORTNAME§ non-outl count",
                 "organisationUnitLevels": [
                     {
                         "id": "§OU_LEVEL§"
@@ -150,7 +150,7 @@ const templateOutlier = () => {
                 },
                 "id": "§PD_OUTLIER_COUNT§",
                 "name": "DQ - §NAME§ outlier count",
-                "shortName": "§NAME§ outlier count",
+                "shortName": "§SHORTNAME§ outlier count",
                 "organisationUnitLevels": [
                     {
                         "id": "§OU_LEVEL§"
@@ -179,7 +179,7 @@ const templateOutlier = () => {
                 },
                 "id": "§PD_OUTLIER_VAL§",
                 "name": "DQ - §NAME§ outliers",
-                "shortName": "§NAME§ outliers",
+                "shortName": "§SHORTNAME§ outliers",
                 "organisationUnitLevels": [
                     {
                         "id": "§OU_LEVEL§"
@@ -208,7 +208,7 @@ const templateOutlier = () => {
                 },
                 "id": "§PD_THRESHOLD§",
                 "name": "DQ - §NAME§ outlier threshold (mean + §VAL_STDDEV§ SD)",
-                "shortName": "§NAME§ outlier threshold",
+                "shortName": "§SHORTNAME§ outl threshold",
                 "organisationUnitLevels": [
                     {
                         "id": "§OU_LEVEL§"
