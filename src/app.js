@@ -125,10 +125,11 @@ async function makeSelectOuLevel() {
     var orgunits = data["organisationUnits"];
     var levels = {};
     for (var ou of orgunits) {
-        levels[ou.level] = true;
+        if (ou.level > 1) levels[ou.level] = true;
     }
     
-    var htmlCode = await makeSelect("organisationUnitLevels", "?filter=level:in:[" + Object.keys(levels).join(",") + "]");
+    var sortedLevels = Object.keys(levels).map(Number).sort((a, b) => a - b);
+    var htmlCode = await makeSelect("organisationUnitLevels", "?filter=level:in:[" + sortedLevels.join(",") + "]");
     $("#selectOuLevel").html(htmlCode);
 }
 
