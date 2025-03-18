@@ -1,7 +1,7 @@
 {
   "name": "tool-dq-config",
   "description": "Tool to configure data quality metrics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "dependencies": {
     "jquery": "^3.7.1",
     "webpack-jquery-ui": "^2.0.1"
@@ -43,6 +43,7 @@
       "48": "img/icons/app_logo_48x48.png",
       "96": "img/icons/app_logo_96x96.png"
     },
-    "appType": "APP"
+    "appType": "APP",
+    "name": "DQ Metrics Configuration Tool"
   }
 }
