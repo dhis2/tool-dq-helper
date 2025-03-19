@@ -1,5 +1,120 @@
 
-export { templateOutlier };
+export { templateCompleteness, templateConsistency, templateOutlier };
+
+const templateCompleteness = () => {
+    return {
+        "indicators": [    {
+            "name": "DQ - §NAME§ data element completeness (%)",
+            "shortName": "§NAME§ completeness (%)",
+            "description": "§NAME§ data element completeness, defined as 100 x (count of reported values)/(expected reports).",
+            "annualized": false,
+            "indicatorType": {
+                "id": "§IN_TYPE§"
+            },
+            "numerator": "subExpression(if(isNotNull(#{§DS_SOURCE§}), 1, 0))",
+            "numeratorDescription": "§NAME§ count of values",
+            "denominator": "R{§DS_SOURCE§.EXPECTED_REPORTS}",
+            "denominatorDescription": "§NAME_DS§ - Expected reports",
+            "id": "§IN_COMPL"
+        }]
+    };
+};
+
+const templateConsistency = () => {
+    return {
+        "dataElements": [{
+            "name": "DQ - §NAME§ orgunits reported in all the last 12 Months",
+            "shortName": "§SHORTNAME§ all last 12 mnths",
+            "description": "Auto-generated from predictor. Count of orgunits (facilities) that reported §NAME§ in ALL the 12 months prior to the reporting period.",
+            "aggregationType": "SUM",
+            "valueType": "INTEGER_ZERO_OR_POSITIVE",
+            "domainType": "AGGREGATE",
+            "zeroIsSignificant": false,
+            "id": "§DE_CONS_ALL§"
+        },
+        {
+            "name": "DQ - §NAME§ orgunits reported in any of the last 12 Months",
+            "shortName": "§SHORTNAME§ any last 12 mnths",
+            "description": "Auto-generated from predictor. Count of orgunits (facilities) that reported §NAME§ in ANY of the 12 months prior to the reporting period. Used as an alternative measure of 'expected reports' for completeness.",
+            "aggregationType": "SUM",
+            "valueType": "INTEGER_ZERO_OR_POSITIVE",
+            "domainType": "AGGREGATE",
+            "zeroIsSignificant": false,
+            "id": "§DE_CONS_ANY§"
+        }],
+        "indicators": [{
+            "name": "DQ - §NAME§ facilities consistently reporting last 12 months (%)",
+            "shortName": "§SHORTNAME§ reported 12 mnths (%)",
+            "description": "The percentage of facilities that reported §NAME§ in all the previous 12 months, out of those facilities that reported §NAME§ in any of the previous 12 months.",
+            "annualized": false,
+            "decimals": 1,
+            "indicatorType": {
+                "id": "§IN_TYPE§"
+            },
+            "numerator": "#{§DE_CONS_ALL§}",
+            "numeratorDescription": "Orgunits reported $NAME$ in all the last 12 Months",
+            "denominator": "#{§DE_CONS_ANY§}",
+            "denominatorDescription": "Orgunits reported $NAME$ in any of the last 12 Months",
+            "id": "§IN_CONS_PROP§"
+        }],
+        "predictors": [{
+            "name": "DQ - §NAME§ orgunits reported in all the last 12 Months",
+            "shortName": "§SHORTNAME§ all last 12 mnths",
+            "description": "Count of orgunits (facilities) that reported §NAME§ in ALL the 12 months prior to the reporting period.",
+            "output": {
+                "id": "§DE_CONS_ALL§"
+            },
+            "outputCombo": {
+                "id": "§COC_DEFAULT§"
+            },
+            "generator": {
+                "expression": "if(sum(if(isNotNull(#{§DE_SOURCE§}),1,0)) == 12,1,0)",
+                "description": "§NAME§ reported in all the previous 12 months",
+                "slidingWindow": false,
+                "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
+            },
+            "periodType": "Monthly",
+            "organisationUnitLevels": [
+                {
+                    "id": "§OU_LEVEL§"
+                }
+            ],
+            "organisationUnitDescendants": "SELECTED",
+            "sequentialSampleCount": 12,
+            "annualSampleCount": 0,
+            "sequentialSkipCount": 0,
+            "id": "§PD_CONS_ALL§"
+        },
+        {
+            "name": "DQ - §NAME§ orgunits reported in any of the last 12 Months",
+            "shortName": "§SHORTNAME§ any last 12 mnths",
+            "description": "Count of orgunits (facilities) that reported §NAME§ in ANY of the 12 months prior to the reporting period. Used as an alternative measure of 'expected reports' for completeness.",
+            "output": {
+                "id": "§DE_CONS_ANY§"
+            },
+            "outputCombo": {
+                "id": "§COC_DEFAULT§"
+            },
+            "generator": {
+                "expression": "if(isNotNull(#{§DE_SOURCE§}),1,0)",
+                "description": "§NAME§ reported in any of the previous 12 months",
+                "slidingWindow": false,
+                "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
+            },
+            "periodType": "Monthly",
+            "organisationUnitLevels": [
+                {
+                    "id": "§OU_LEVEL§"
+                }
+            ],
+            "organisationUnitDescendants": "SELECTED",
+            "sequentialSampleCount": 12,
+            "annualSampleCount": 0,
+            "sequentialSkipCount": 0,
+            "id": "§PD_CONS_ANY§"
+        }]
+    };
+};
 
 const templateOutlier = () => {
     return {
