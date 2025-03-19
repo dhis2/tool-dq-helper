@@ -5,7 +5,7 @@ const templateCompleteness = () => {
     return {
         "indicators": [    {
             "name": "DQ - §NAME§ data element completeness (%)",
-            "shortName": "§NAME§ completeness (%)",
+            "shortName": "§SHORTNAME§ completeness (%)",
             "description": "§NAME§ data element completeness, defined as 100 x (count of reported values)/(expected reports).",
             "annualized": false,
             "indicatorType": {
@@ -15,7 +15,7 @@ const templateCompleteness = () => {
             "numeratorDescription": "§NAME§ count of values",
             "denominator": "R{§DS_SOURCE§.EXPECTED_REPORTS}",
             "denominatorDescription": "§NAME_DS§ - Expected reports",
-            "id": "§IN_COMPL"
+            "id": "§IN_COMPL§"
         }]
     };
 };

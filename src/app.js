@@ -22,7 +22,7 @@ async function configureConsistencyMetadata(deSource) {
 
     let consistencyConfig = {
         "§NAME§": deSource.name,
-        "§SHORTNAME§": deSource.shortName.length > 30 ? deSource.shortName.substring(0, 30) : deSource.shortName,
+        "§SHORTNAME§": deSource.shortName.length > 28 ? deSource.shortName.substring(0, 28) : deSource.shortName,
         "§DE_SOURCE§": deSource.id,
         "§IN_TYPE§": await indicatorTypePercentId(),
         "§COC_DEFAULT§": await defaultCoCId(),
@@ -52,6 +52,7 @@ async function configureConsistencyMetadata(deSource) {
     shareMetadata(consistencyImport, baseConfig["userGroup"]);
 
     currentImport = {
+        ...currentImport,
         "consistencyImport": consistencyImport,
         "consistencyConfig": consistencyConfig
     };
@@ -66,6 +67,7 @@ async function configureCompletenessMetadata(deSource, dsSource) {
 
     let completenessConfig = {
         "§NAME§": deSource.name,
+        "§SHORTNAME§": deSource.shortName.length > 30 ? deSource.shortName.substring(0, 30) : deSource.shortName,
         "§NAME_DS§": dsSource.name,
         "§DE_SOURCE§": deSource.id,
         "§DS_SOURCE§": dsSource.id,
@@ -92,6 +94,7 @@ async function configureCompletenessMetadata(deSource, dsSource) {
     shareMetadata(completenessImport, baseConfig["userGroup"]);
 
     currentImport = {
+        ...currentImport,
         "completenessImport": completenessImport,
         "completenessConfig": completenessConfig
     };
@@ -144,6 +147,7 @@ async function configureOutlierMetadata(deSource) {
     shareMetadata(outlierImport, baseConfig["userGroup"]);
 
     currentImport = {
+        ...currentImport,
         "outlierImport": outlierImport,
         "outlierConfig": outlierConfig
     };
@@ -495,21 +499,35 @@ window.importMetadata = async function () {
     $("#resultSection").hide();
 
     var outlierConfig = currentImport["outlierConfig"];
-    var outlierImport = currentImport["outlierImport"];
 
     if (!confirm("Configure data quality metrics metadata for '" + [outlierConfig["§NAME§"]] + "'?")) {
         return;
     }
+
+    var results = [
+        ...(await importOutlier()),
+        ...(await importConsistency()),
+        ...(await importCompleteness())
+    ];
+
+    $("#resultSection").show();
+    var resultTable = generateResultsTable(results);
+    $("#resultTableContainer").html(resultTable);
+};
+
+async function importOutlier() {
+    var outlierConfig = currentImport["outlierConfig"];
+    var outlierImport = currentImport["outlierImport"];
 
     var importResult, addGroups = false, results = [];
     
     //Import metadata
     try {
         importResult = await d2PostJson("/api/metadata", outlierImport);    
-        results.push(["Metadata import", importResult["status"]]);
+        results.push(["Outlier - Metadata import", importResult["status"]]);
         addGroups = true;
     } catch (error) {
-        results.push(["Metadata import", error["status"]]);
+        results.push(["Outlier - Metadata import", error["status"]]);
     }
     
     
@@ -517,18 +535,18 @@ window.importMetadata = async function () {
         try {
             //Add objects to groups
             importResult = await addToDeGroup(baseConfig.dataElementGroup, outlierImport.dataElements);
-            results.push(["Add to data element group", importResult["status"]]);
+            results.push(["Outlier - Add to data element group", importResult["status"]]);
             importResult = await addToInGroup(baseConfig.indicatorGroup, outlierImport.indicators);
-            results.push(["Add to indicator group", importResult["status"]]);
+            results.push(["Outlier - Add to indicator group", importResult["status"]]);
             importResult = await addToPdGroup(baseConfig.predictorGroup, outlierImport.predictors);
-            results.push(["Add to general predictor group", importResult["status"]]);
+            results.push(["Outlier - Add to general predictor group", importResult["status"]]);
             importResult = await addToPdGroup(baseConfig.predictorGroupTreshold, splitOutlierPredictors(outlierConfig, outlierImport.predictors)["treshold"]);
-            results.push(["Add to treshold predictor group", importResult["status"]]);
+            results.push(["Outlier - Add to treshold predictor group", importResult["status"]]);
             importResult = await addToPdGroup(baseConfig.predictorGroupAnalysis, splitOutlierPredictors(outlierConfig, outlierImport.predictors)["analysis"]);
-            results.push(["Add to analysis predictor group", importResult["status"]]);
+            results.push(["Outlier - Add to analysis predictor group", importResult["status"]]);
         }
         catch (error) {
-            results.push("Add to groups", error["status"]);
+            results.push("Outlier - Add to groups", error["status"]);
         }
         try {
             //Add config to dataStore
@@ -538,16 +556,107 @@ window.importMetadata = async function () {
             });
 
             importResult = await d2PutJson("/api/dataStore/dqConfig/outliers", outlierStore);
-            results.push(["Save DQ helper config", importResult["status"]]);
+            results.push(["Outlier - Save DQ helper config", importResult["status"]]);
         } catch (error) {
-            results.push(["Save DQ helper config", error["status"]]);
+            results.push(["Outlier - Save DQ helper config", error["status"]]);
         }
     }
 
-    $("#resultSection").show();
-    var resultTable = generateResultsTable(results);
-    $("#resultTableContainer").html(resultTable);
-};
+    return results;
+}
+
+async function importConsistency() {
+    var consistencyConfig = currentImport["consistencyConfig"];
+    var consistencyImport = currentImport["consistencyImport"];
+
+    var importResult, addGroups = false, results = [];
+    
+    //Import metadata
+    try {
+        importResult = await d2PostJson("/api/metadata", consistencyImport);    
+        results.push(["Consistency - Metadata import", importResult["status"]]);
+        addGroups = true;
+    } catch (error) {
+        results.push(["Consistency - Metadata import", error["status"]]);
+    }
+    
+    
+    if (addGroups) {
+        try {
+            //Add objects to groups
+            importResult = await addToDeGroup(baseConfig.dataElementGroup, consistencyImport.dataElements);
+            results.push(["Consistency - Add to data element group", importResult["status"]]);
+            importResult = await addToInGroup(baseConfig.indicatorGroup, consistencyImport.indicators);
+            results.push(["Consistency - Add to indicator group", importResult["status"]]);
+            importResult = await addToPdGroup(baseConfig.predictorGroup, consistencyImport.predictors);
+            results.push(["Consistency - Add to general predictor group", importResult["status"]]);
+            importResult = await addToPdGroup(baseConfig.predictorGroupConsistency, consistencyImport.predictors);
+            results.push(["Consistency - Add to treshold predictor group", importResult["status"]]);
+        }
+        catch (error) {
+            results.push(["Consistency - Add to groups", error["status"]]);
+        }
+        try {
+            //Add config to dataStore
+            let consistencyStore = await d2Get("/api/dataStore/dqConfig/consistency");
+            consistencyStore.push( {
+                [consistencyConfig["§DE_SOURCE§"]]: consistencyConfig
+            });
+
+            importResult = await d2PutJson("/api/dataStore/dqConfig/consistency", consistencyStore);
+            results.push(["Consistency - Save DQ helper config", importResult["status"]]);
+        } catch (error) {
+            results.push(["Consistency - Save DQ helper config", error["status"]]);
+        }
+    }
+
+    return results;
+}
+
+
+async function importCompleteness() {
+    var completenessConfig = currentImport["completenessConfig"];
+    var completenessImport = currentImport["completenessImport"];
+
+    var importResult, addGroups = false, results = [];
+    
+    //Import metadata
+    try {
+        importResult = await d2PostJson("/api/metadata", completenessImport);
+        console.log(importResult);
+        results.push(["Completeness - Metadata import", importResult["status"]]);
+        addGroups = true;
+    } catch (error) {
+        results.push(["Completeness - Metadata import", "Error " + error["status"]]);
+    }
+    
+    
+    if (addGroups) {
+        try {
+            //Add objects to groups
+            importResult = await addToInGroup(baseConfig.indicatorGroup, completenessImport.indicators);
+            results.push(["Completeness - Add to indicator group", importResult["status"]]);
+        }
+        catch (error) {
+            results.push(["Completeness - Add to groups", error["status"]]);
+        }
+        try {
+            //Add config to dataStore
+            let completenessStore = await d2Get("/api/dataStore/dqConfig/completeness");
+            completenessStore.push( {
+                [completenessConfig["§DE_SOURCE§"]]: completenessConfig
+            });
+
+            importResult = await d2PutJson("/api/dataStore/dqConfig/completeness", completenessStore);
+            results.push(["Completeness - Save DQ helper config", importResult["status"]]);
+        } catch (error) {
+            results.push(["Completeness - Save DQ helper config", error["status"]]);
+        }
+    }
+
+    return results;
+}
+
 
 window.closeApp = function() {
     window.location.href = "../..";
@@ -630,9 +739,16 @@ window.initialise = async function () {
     baseConfig.predictorGroupAnalysis = group.id;
     await d2PostJson("/api/predictorGroups", group);
 
+    group.name = "DQ - Data quality predictors (consistency)";
+    group.id = uids.pop();
+    baseConfig.predictorGroupConsistency = group.id;
+    await d2PostJson("/api/predictorGroups", group);
+
     //make dqConfig dataStore entry with baseline info
     await d2PostJson("/api/dataStore/dqConfig/baseConfig", baseConfig);
     await d2PostJson("/api/dataStore/dqConfig/outliers", []);
+    await d2PostJson("/api/dataStore/dqConfig/consistency", []);
+    await d2PostJson("/api/dataStore/dqConfig/completeness", []);
 
     load();
 };

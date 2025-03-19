@@ -130,6 +130,9 @@ const webpackConfig = {
     devServer: {
         port: devServerPort,
         compress: true,
+        client: {
+            overlay: false
+        },
         proxy: [
             {
                 context: () => true,
