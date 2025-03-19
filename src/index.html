@@ -36,7 +36,7 @@
             <p>To do.. Describe the purpose of the app and how to use it.
             </p>
 
-            <h3>Selection</h3>
+            <h2>Selection</h2>
             <p>All fields are required!</p>
             <div class="selection">
                 <label>Data set - used to filter data elements</label><br>
@@ -59,15 +59,28 @@
 
 
             <div id="previewSection" style="display: none;">
-                <h3>Preview</h3>
+                <h2>Preview</h2>
+                <h3>Outliers</h3>
                 <h4>Data elements</h4>
-                <div id="dataElementPreview"></div>
+                <div id="dataElementPreviewOutlier"></div>
                 <h4>Predictors</h4>
-                <div id="predictorPreview"></div>
+                <div id="predictorPreviewOutlier"></div>
                 <h4>Indicators</h4>
-                <div id="indicatorPreview"></div>
+                <div id="indicatorPreviewOutlier"></div>
 
-                <button id="buttonImport" class="standardButton" disabled id onclick="importOutlier()">Import 🤞</button>
+                <h3>Consistency</h3>
+                <h4>Data elements</h4>
+                <div id="dataElementPreviewConsistency"></div>
+                <h4>Predictors</h4>
+                <div id="predictorPreviewConsistency"></div>
+                <h4>Indicators</h4>
+                <div id="indicatorPreviewConsistency"></div>
+
+                <h3>Completeness</h3>
+                <h4>Indicators</h4>
+                <div id="indicatorPreviewCompleteness"></div>
+
+                <button id="buttonImport" class="standardButton" disabled id onclick="importMetadata()">Import 🤞</button>
             </div>
 
 
@@ -76,12 +89,7 @@
                 <div id="resultTableContainer"></div>
             </div>
 
-        </div>
-
-        <div id="tabCompleteness">
-            <p>Maybe later..</p>
-        </div>
-        
+        </div>        
     </div>
 </body>
 

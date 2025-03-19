@@ -6,7 +6,7 @@ import "webpack-jquery-ui";
 import "webpack-jquery-ui/css";
 
 import { d2Get, d2PostJson, d2PutJson } from "./js/d2api.js";
-import { templateOutlier } from "./js/templates.js";
+import { templateOutlier, templateConsistency, templateCompleteness } from "./js/templates.js";
 
 //CSS
 import "./css/style.css";
@@ -17,9 +17,87 @@ var currentImport = {};
 
 // REPORTING CONSISTENCY METADATA CONFIGURATION
 
+//Configure metadata for outlier analysis
+async function configureConsistencyMetadata(deSource) {
+
+    let consistencyConfig = {
+        "§NAME§": deSource.name,
+        "§SHORTNAME§": deSource.shortName.length > 30 ? deSource.shortName.substring(0, 30) : deSource.shortName,
+        "§DE_SOURCE§": deSource.id,
+        "§IN_TYPE§": await indicatorTypePercentId(),
+        "§COC_DEFAULT§": await defaultCoCId(),
+        "§OU_LEVEL§": $("#selectOuLevel").find(":selected").val(),
+        "§DE_CONS_ALL§": false,
+        "§DE_CONS_ANY§": false,
+        "§IN_CONS_PROP§": false,
+        "§PD_CONS_ALL§": false,
+        "§PD_CONS_ANY§": false
+    };
+
+    var uids = await generateUids(6);
+
+    //Load template outlier metadata as string, so do search/replace of properties
+    var templateText = JSON.stringify(templateConsistency());
+
+    for (var prop in consistencyConfig) {
+        if (!consistencyConfig[prop]) consistencyConfig[prop] = uids.pop();
+        var search = new RegExp(prop, "g");
+        var replace = consistencyConfig[prop];
+        templateText = templateText.replace(search, replace);
+    }
+
+    var consistencyImport = JSON.parse(templateText);
+
+    //Apply sharing
+    shareMetadata(consistencyImport, baseConfig["userGroup"]);
+
+    currentImport = {
+        "consistencyImport": consistencyImport,
+        "consistencyConfig": consistencyConfig
+    };
+
+    return consistencyImport;
+}
 
 // DATA ELEMENT COMPLETENESS METADATA CONFIGURATION
 
+//Configure metadata for completeness analysis
+async function configureCompletenessMetadata(deSource, dsSource) {
+
+    let completenessConfig = {
+        "§NAME§": deSource.name,
+        "§NAME_DS§": dsSource.name,
+        "§DE_SOURCE§": deSource.id,
+        "§DS_SOURCE§": dsSource.id,
+        "§IN_TYPE§": await indicatorTypePercentId(),
+        "§IN_COMPL§": false
+    };
+    
+
+    var uids = await generateUids(6);
+
+    //Load template completeness metadata as string, so do search/replace of properties
+    var templateText = JSON.stringify(templateCompleteness());
+
+    for (var prop in completenessConfig) {
+        if (!completenessConfig[prop]) completenessConfig[prop] = uids.pop();
+        var search = new RegExp(prop, "g");
+        var replace = completenessConfig[prop];
+        templateText = templateText.replace(search, replace);
+    }
+
+    var completenessImport = JSON.parse(templateText);
+
+    //Apply sharing
+    shareMetadata(completenessImport, baseConfig["userGroup"]);
+
+    currentImport = {
+        "completenessImport": completenessImport,
+        "completenessConfig": completenessConfig
+    };
+
+    return completenessImport;
+}
 
 // OUTLIER METADATA CONFIGURATION
 
@@ -380,15 +458,32 @@ window.previewConfiguration = async function () {
     $("#resultSection").hide();
     $("#previewSection").hide();
 
+    currentImport = {};
+
     var deSourceId = $("#selectDataElement").find(":selected").val();
+    var dsSourceId = $("#selectDataSet").val();
 
     var dataElement = await d2Get("/api/dataElements/" + deSourceId + "?fields=name,shortName,id");
-    
-    let metadata = await configureOutlierMetadata(dataElement);
+    var dataSet = await d2Get("/api/dataSets/" + dsSourceId + "?fields=name,shortName,id,periodType");
+    if (dataSet.periodType != "Monthly") {
+        alert("Only monthly data sets are automatically supported, configuration of this dataset be updated manually.");
+    }
 
-    $("#dataElementPreview").html(makeTable(metadata["dataElements"], ["name", "shortName", "description"]));
-    $("#predictorPreview").html(makeTable(metadata["predictors"], ["name", "shortName", "generator[expression]"]));
-    $("#indicatorPreview").html(makeTable(metadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+    // Outlier
+    let outlierMetadata = await configureOutlierMetadata(dataElement);
+    $("#dataElementPreviewOutlier").html(makeTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]));
+    $("#predictorPreviewOutlier").html(makeTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
+    $("#indicatorPreviewOutlier").html(makeTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+
+    // Consistency
+    let consistencyMetadata = await configureConsistencyMetadata(dataElement);
+    $("#dataElementPreviewConsistency").html(makeTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]));
+    $("#predictorPreviewConsistency").html(makeTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
+    $("#indicatorPreviewConsistency").html(makeTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+
+    // Completeness
+    let completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
+    $("#indicatorPreviewCompleteness").html(makeTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
 
 
     $("#previewSection").show();
@@ -396,13 +491,13 @@ window.previewConfiguration = async function () {
 
 };
 
-window.importOutlier = async function () {
+window.importMetadata = async function () {
     $("#resultSection").hide();
 
     var outlierConfig = currentImport["outlierConfig"];
     var outlierImport = currentImport["outlierImport"];
 
-    if (!confirm("Configure outlier analysis metadata for '" + [outlierConfig["§NAME§"]] + "'?")) {
+    if (!confirm("Configure data quality metrics metadata for '" + [outlierConfig["§NAME§"]] + "'?")) {
         return;
     }
 
@@ -449,7 +544,6 @@ window.importOutlier = async function () {
         }
     }
 
-    
     $("#resultSection").show();
     var resultTable = generateResultsTable(results);
     $("#resultTableContainer").html(resultTable);

@@ -11,7 +11,7 @@ const templateCompleteness = () => {
             "indicatorType": {
                 "id": "§IN_TYPE§"
             },
-            "numerator": "subExpression(if(isNotNull(#{§DS_SOURCE§}), 1, 0))",
+            "numerator": "subExpression(if(isNotNull(#{§DE_SOURCE§}), 1, 0))",
             "numeratorDescription": "§NAME§ count of values",
             "denominator": "R{§DS_SOURCE§.EXPECTED_REPORTS}",
             "denominatorDescription": "§NAME_DS§ - Expected reports",
