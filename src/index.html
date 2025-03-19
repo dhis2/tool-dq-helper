@@ -22,8 +22,7 @@
     <div class="mainView" id="tabs">        
         <ul>
             <li><a href="#tabOverview">Overview</a></li>
-            <li><a href="#tabOutlier">Outliers</a></li>
-            <li><a href="#tabCompleteness">Completeness</a></li>
+            <li><a href="#tabConfigure">Configure</a></li>
         </ul>
     
 
@@ -32,11 +31,9 @@
         </div>
 
 
-        <div id="tabOutlier"> 
-            <h1>Configure metadata for outlier analysis</h1>
-            <p>Using predictors, data elements and indicators, you can configure DHIS2 to provide outlier analysis of 
-                individual data elements that can be used in visualizations and on dashboards. You can read more
-                <a href="https://docs.dhis2.org/en/implement/data-quality/analysis.html#statistical-outliers-in-time-series">here</a>.
+        <div id="tabConfigure"> 
+            <h1>Configure and create data quality metadata</h1>
+            <p>To do.. Describe the purpose of the app and how to use it.
             </p>
 
             <h3>Selection</h3>
@@ -46,7 +43,7 @@
                 <select id="selectDataSet" class="dataSelect"></select>
             </div>
             <div class="selection">
-                <label>Data element to configure outlier checks for</label></br>
+                <label>Data element to configure data quality metrics for</label></br>
                 <select id="selectDataElement" class="dataSelect"></select>
             </div>
             <div class="selection">
@@ -54,11 +51,11 @@
                 <select id="selectOuLevel" class="dataSelect"></select>
             </div>
             <div class="selection">
-                <label>Number of standard deviations from the mean to use as outlier threshold</label></br>
+                <label>Outliers: Standard deviations from the mean to use as outlier threshold</label></br>
                 <input id="selectThreshold" class="dataSelect" type="number" min="2" max="4" step="0.1" value="3.0" pattern="\d\.\d">
             </div>
             
-            <button id="buttonPreview" class="standardButton" disabled id onclick="previewOutlier()">Preview</button>
+            <button id="buttonPreview" class="standardButton" disabled id onclick="previewConfiguration()">Preview</button>
 
 
             <div id="previewSection" style="display: none;">

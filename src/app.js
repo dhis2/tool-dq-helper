@@ -376,7 +376,7 @@ async function updateDataElements() {
     }
 }
 
-window.previewOutlier = async function () {
+window.previewConfiguration = async function () {
     $("#resultSection").hide();
     $("#previewSection").hide();
 
