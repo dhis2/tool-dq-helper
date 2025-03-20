@@ -1,7 +1,7 @@
 {
   "name": "tool-dq-config",
   "description": "Tool to configure data quality metrics",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "dependencies": {
     "jquery": "^3.7.1",
     "webpack-jquery-ui": "^2.0.1"

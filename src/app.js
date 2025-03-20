@@ -428,28 +428,36 @@ async function prepOutlierInputs() {
 async function updateDataElements() {
     try {
         const dataSetId = $("#selectDataSet").val();
-        
-        const dataElementsResponse = await d2Get(`/api/dataElements?filter=dataSetElements.dataSet.id:like:${dataSetId}&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id&paging=false`);
+        const dataElementsResponse = await d2Get(`/api/dataElements?filter=dataSetElements.dataSet.id:like:${dataSetId}&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id,categoryCombo[name]&paging=false`);
         const dataElements = [...dataElementsResponse["dataElements"]].sort((a, b) => b.name.localeCompare(a.name));
-
-        const dataElementIds = dataElements.map(obj => obj.id);
-        const combinedItemsResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:in:[${dataElementIds.join(",")}]&filter=id:like:.&fields=name,id&paging=false`);
-        const combinedItems = [...combinedItemsResponse["dataElementOperands"]].sort((a, b) => b.name.localeCompare(a.name));
         
+        const dataElementIds = dataElements.map(obj => obj.id);
+        
+        // Fetch combined items
+        const combinedItemsResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:in:[${dataElementIds.join(",")}]&filter=id:like:.&fields=name,id,categoryOptionCombo[name]&paging=false`);
+        const combinedItems = [...combinedItemsResponse["dataElementOperands"]].sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Incorporate default category elements
         dataElements.forEach(de => {
+            const isDefault = de.categoryCombo.name.toLowerCase() === "default";
+            const suffix = isDefault ? "(default)" : "(total)";
+            de.name += ` ${suffix}`;
+            
             if (!hasObject(combinedItems, "id", de.id)) {
-                de.name += " (total)";
                 combinedItems.unshift(de);
             }
         });
 
+        // Mark options already used in outliers
         const outliersResponse = await d2Get("/api/dataStore/dqConfig/outliers");
         const outlierIds = outliersResponse.reduce((ids, ol) => ids.concat(Object.keys(ol)), []);
-
+        
+        // Build HTML options string
         const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
-            combinedItems.map(obj => 
-                `<option value='${obj.id}' id='${obj.id}' ${outlierIds.includes(obj.id) ? "disabled" : ""}>${obj.name}</option>`
-            )
+            combinedItems.map(obj => {
+                const categoryOptionComboSuffix = obj.categoryOptionCombo ? ` - ${obj.categoryOptionCombo.name}` : "";
+                return `<option value='${obj.id}' id='${obj.id}' ${outlierIds.includes(obj.id) ? "disabled" : ""}>${obj.name}${categoryOptionComboSuffix}</option>`;
+            })
         ).join("");
 
         $("#selectDataElement").html(dataElementHtml);
@@ -457,6 +465,7 @@ async function updateDataElements() {
         alert(`Failed to update data elements: ${error.message}`);
     }
 }
+
 
 window.previewConfiguration = async function () {
     $("#resultSection").hide();
