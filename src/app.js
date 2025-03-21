@@ -390,22 +390,21 @@ async function makeSelectOuLevel() {
 
 //Returns true if required selection for preview is possible, otherwise false
 function previewPossible() {
-    const dsId = $("#selectDataSet").find(":selected").val();
-    const deId = $("#selectDataElement").find(":selected").val();
-    const ouLvl = $("#selectOuLevel").find(":selected").val();
+    const dsId = $("#selectDataSet").val();
+    const deId = $("#selectDataElement").val();
+    const ouLvl = $("#selectOuLevel").val();
     const threshold = $("#selectThreshold").val();
+    const deOperandId = $("#selectDataElementOperand").is(":visible") ? $("#selectDataElementOperand").val() : true;
 
-    // Check deOperandId only if selectDataElementOperand is visible
-    const deOperandIsValid = !($("#selectDataElementOperand").is(":visible")) || $("#selectDataElementOperand").find(":selected").val();
-
-    const isSelectionValid = dsId && dsId.length === 11 &&
-                            deId && deId.length > 0 &&
-                            ouLvl && ouLvl.length > 0 &&
-                            threshold && parseFloat(threshold) > 0 && parseFloat(threshold) < 10 &&
-                            deOperandIsValid;
+    const isSelectionValid = dsId && 
+                            deId && 
+                            ouLvl && 
+                            threshold &&
+                            deOperandId;
 
     $("#buttonPreview").prop("disabled", !isSelectionValid);
 }
+
 
 
 
@@ -425,8 +424,12 @@ async function listConfig() {
 async function prepOutlierInputs() {
     const htmlCode = await makeSelect("dataSets", "?paging=false");
     $("#selectDataSet").html(htmlCode);
-    $("#selectDataSet").on("change", updateDataElements);
-    $("#selectDataSet").on("change", makeSelectOuLevel);
+
+    $("#selectDataSet").on("change", async function () {
+        await updateDataElements();
+        await makeSelectOuLevel();
+        previewPossible();
+    });
 
     $("#selectDataElementOperand").parent().hide();
 
@@ -451,8 +454,12 @@ async function prepOutlierInputs() {
         previewPossible();
     });
 
+    $("#selectOuLevel").on("change", previewPossible);
+    $("#selectThreshold").on("input", previewPossible);
+
     return false;
 }
+
 
 
 
