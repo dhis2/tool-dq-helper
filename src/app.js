@@ -390,18 +390,25 @@ async function makeSelectOuLevel() {
 
 //Returns true if required selection for preview is possible, otherwise false
 function previewPossible() {
-    var dsId = $("#selectDataSet").find(":selected").val();
-    var deId = $("#selectDataElement").find(":selected").val();
-    var ouLvl = $("#selectOuLevel").find(":selected").val();
-    var threshold = $("#selectThreshold").val();
+    const dsId = $("#selectDataSet").find(":selected").val();
+    const deId = $("#selectDataElement").find(":selected").val();
+    const ouLvl = $("#selectOuLevel").find(":selected").val();
+    const threshold = $("#selectThreshold").val();
 
-    if (dsId && dsId.length == 11 && deId && deId.length > 10 && ouLvl && ouLvl.length > 10 && threshold && parseFloat(threshold) > 0 && parseFloat(threshold) < 10) {
-        $("#buttonPreview").prop("disabled", false);
-    }
-    else {
-        $("#buttonPreview").prop("disabled", true);
-    }
+    // Check deOperandId only if selectDataElementOperand is visible
+    const deOperandIsValid = !($("#selectDataElementOperand").is(":visible")) || $("#selectDataElementOperand").find(":selected").val();
+
+    const isSelectionValid = dsId && dsId.length === 11 &&
+                            deId && deId.length > 0 &&
+                            ouLvl && ouLvl.length > 0 &&
+                            threshold && parseFloat(threshold) > 0 && parseFloat(threshold) < 10 &&
+                            deOperandIsValid;
+
+    $("#buttonPreview").prop("disabled", !isSelectionValid);
 }
+
+
+
 
 async function listConfig() {
     let outliers = await d2Get("/api/dataStore/dqConfig/outliers");
@@ -415,28 +422,54 @@ async function listConfig() {
     $("#configuredOutliers").html(htmlCode);
 }
 
-//Make select boxes for data set, data element, orgunit level, stdDev
 async function prepOutlierInputs() {
-    var htmlCode = await makeSelect("dataSets", "?paging=false");
+    const htmlCode = await makeSelect("dataSets", "?paging=false");
     $("#selectDataSet").html(htmlCode);
     $("#selectDataSet").on("change", updateDataElements);
     $("#selectDataSet").on("change", makeSelectOuLevel);
 
+    $("#selectDataElementOperand").parent().hide();
+
+    $("#selectDataElement").on("change", async function () {
+        const selectedElement = $("#selectDataElement").find(":selected");
+        const categoryComboName = selectedElement.text().match(/\((.*?)\)$/) ? selectedElement.text().match(/\((.*?)\)$/)[1] : "";
+
+        if (categoryComboName === "total") {
+            $("#selectDataElementOperand").parent().show();
+
+            const dataElementId = selectedElement.val();
+            const operandResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:like:${dataElementId}&fields=id,name&paging=false`);
+            const operandHtml = ["<option value=''>[Select Operand]</option>"].concat(
+                operandResponse["dataElementOperands"].map(operand => `<option value='${operand.id}'>${operand.name}</option>`)
+            ).join("");
+            $("#selectDataElementOperand").html(operandHtml);
+        } else {
+            $("#selectDataElementOperand").parent().hide();
+            $("#selectDataElementOperand").html("<option value=''>[Select Operand]</option>");
+        }
+
+        previewPossible();
+    });
+
     return false;
 }
+
+
+
 
 async function updateDataElements() {
     try {
         const dataSetId = $("#selectDataSet").val();
         const dataElementsResponse = await d2Get(`/api/dataElements?filter=dataSetElements.dataSet.id:like:${dataSetId}&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id,categoryCombo[name]&paging=false`);
-        const dataElements = [...dataElementsResponse["dataElements"]].sort((a, b) => b.name.localeCompare(a.name));
+        
+        const dataElements = [...dataElementsResponse["dataElements"]].sort((a, b) => a.name.localeCompare(b.name));
         
         const dataElementIds = dataElements.map(obj => obj.id);
         
         // Fetch combined items
         const combinedItemsResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:in:[${dataElementIds.join(",")}]&filter=id:like:.&fields=name,id,categoryOptionCombo[name]&paging=false`);
         const combinedItems = [...combinedItemsResponse["dataElementOperands"]].sort((a, b) => a.name.localeCompare(b.name));
-        
+
         // Incorporate default category elements
         dataElements.forEach(de => {
             const isDefault = de.categoryCombo.name.toLowerCase() === "default";
@@ -448,23 +481,22 @@ async function updateDataElements() {
             }
         });
 
-        // Mark options already used in outliers
-        const outliersResponse = await d2Get("/api/dataStore/dqConfig/outliers");
-        const outlierIds = outliersResponse.reduce((ids, ol) => ids.concat(Object.keys(ol)), []);
-        
-        // Build HTML options string
+        // Update selectDataElement HTML options
         const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
             combinedItems.map(obj => {
                 const categoryOptionComboSuffix = obj.categoryOptionCombo ? ` - ${obj.categoryOptionCombo.name}` : "";
-                return `<option value='${obj.id}' id='${obj.id}' ${outlierIds.includes(obj.id) ? "disabled" : ""}>${obj.name}${categoryOptionComboSuffix}</option>`;
+                return `<option value='${obj.id}' id='${obj.id}'>${obj.name}${categoryOptionComboSuffix}</option>`;
             })
         ).join("");
 
         $("#selectDataElement").html(dataElementHtml);
+
     } catch (error) {
         alert(`Failed to update data elements: ${error.message}`);
     }
 }
+
+
 
 
 window.previewConfiguration = async function () {
@@ -475,8 +507,17 @@ window.previewConfiguration = async function () {
 
     var deSourceId = $("#selectDataElement").find(":selected").val();
     var dsSourceId = $("#selectDataSet").val();
+    var deoSourceId = $("#selectDataElementOperand").find(":selected").val();
 
-    var dataElement = await d2Get("/api/dataElements/" + deSourceId + "?fields=name,shortName,id");
+    var dataElement; 
+    if (deSourceId.length === 23) {
+        let dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deSourceId + "&fields=name,shortName,id");
+        dataElement = dataElementOperands["dataElementOperands"][0];
+    }
+    else {
+        dataElement = await d2Get("/api/dataElements/" + deSourceId + "?fields=name,shortName,id");
+    }
+    
     var dataSet = await d2Get("/api/dataSets/" + dsSourceId + "?fields=name,shortName,id,periodType");
     if (dataSet.periodType != "Monthly") {
         alert("Only monthly data sets are automatically supported, configuration of this dataset be updated manually.");
@@ -495,6 +536,10 @@ window.previewConfiguration = async function () {
     $("#indicatorPreviewConsistency").html(makeTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
 
     // Completeness
+    if (deoSourceId != "") {
+        let dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deoSourceId + "&fields=name,shortName,id");
+        dataElement = dataElementOperands["dataElementOperands"][0];
+    }
     let completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
     $("#indicatorPreviewCompleteness").html(makeTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
 
