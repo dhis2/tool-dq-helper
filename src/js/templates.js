@@ -1,5 +1,5 @@
 
-export { templateCompleteness, templateConsistency, templateOutlier };
+export { templateCompleteness, templateConsistency, templateOutlier, templateCompletenessDisaggregated };
 
 const templateCompleteness = () => {
     return {
@@ -17,6 +17,67 @@ const templateCompleteness = () => {
             "denominatorDescription": "§NAME_DS§ - Expected reports",
             "id": "§IN_COMPL§"
         }]
+    };
+};
+
+const templateCompletenessDisaggregated = () => {
+    return {
+        "dataElements": [
+            {
+                "aggregationType": "SUM",
+                "domainType": "AGGREGATE",
+                "id": "§DE_COMPL_ANY§",
+                "name": "DQ - §NAME§ data reported for any disaggregation",
+                "shortName": "§SHORTNAME§ any disaggr",
+                "valueType": "INTEGER_ZERO_OR_POSITIVE",
+                "zeroIsSignificant": false,
+                "description": "Auto-generated from predictor. Count of orgunits (facilities) that reported §NAME§ for any disaggregation. Used to calculate data element completeness."
+            }
+        ],
+        "indicators": [
+            {
+                "annualized": false,
+                "denominator": "R{§DS_SOURCE§.EXPECTED_REPORTS}",
+                "denominatorDescription": "§NAME_DS§ - Expected reports",
+                "description": "§NAME§ data element completeness, defined as 100 x (count of reported values)/(expected reports). The data element is considered reported if there is data for any disaggregation.",
+                "id": "§IN_COMPL_ANY§",
+                "indicatorType": {
+                    "id": "§IN_TYPE§"
+                },
+                "name": "DQ - §NAME§ data element completeness (%)",
+                "numerator": "§DE_COMPL_ANY§",
+                "numeratorDescription": "§NAME§ count of values (for any disaggregation)",
+                "shortName": "§SHORTNAME§ completeness (%)"
+            }
+        ],
+        "predictors": [
+            {
+                "name": "DQ - §NAME§ data reported for any disaggregation",
+                "shortName": "§SHORTNAME§ any disaggr",
+                "id": "§PD_COMPL_ANY§",
+                "generator": {
+                    "description": "§NAME§ data for any disaggregation",
+                    "expression": "(if(isNotNull(#{§DE_SOURCE§}), 1, 0))",
+                    "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",
+                    "slidingWindow": false
+                },
+                "annualSampleCount": 0,
+                "sequentialSampleCount": 0,
+                "organisationUnitLevels": [
+                    {
+                        "id": "§OU_LEVEL§"
+                    }
+                ],
+                "organisationUnitDescendants": "SELECTED",
+                "output": {
+                    "id": "§DE_COMPL_ANY§"
+                },
+                "outputCombo": {
+                    "id": "§COC_DEFAULT§"
+                },
+                "periodType": "Monthly"
+            }
+        ]
     };
 };
 
@@ -52,9 +113,9 @@ const templateConsistency = () => {
                 "id": "§IN_TYPE§"
             },
             "numerator": "#{§DE_CONS_ALL§}",
-            "numeratorDescription": "Orgunits reported $NAME$ in all the last 12 Months",
+            "numeratorDescription": "Orgunits reported §NAME§ in all the last 12 Months",
             "denominator": "#{§DE_CONS_ANY§}",
-            "denominatorDescription": "Orgunits reported $NAME$ in any of the last 12 Months",
+            "denominatorDescription": "Orgunits reported §NAME§ in any of the last 12 Months",
             "id": "§IN_CONS_PROP§"
         }],
         "predictors": [{
@@ -96,7 +157,7 @@ const templateConsistency = () => {
                 "id": "§COC_DEFAULT§"
             },
             "generator": {
-                "expression": "if(isNotNull(#{§DE_SOURCE§}),1,0)",
+                "expression": "if(isNotNull(sum(#{§DE_SOURCE§})),1,0)",
                 "description": "§NAME§ reported in any of the previous 12 months",
                 "slidingWindow": false,
                 "missingValueStrategy": "SKIP_IF_ALL_VALUES_MISSING",

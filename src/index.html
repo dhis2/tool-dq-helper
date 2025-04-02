@@ -46,9 +46,16 @@
                 <label>Data element to configure data quality metrics for</label></br>
                 <select id="selectDataElement" class="dataSelect"></select>
             </div>
-            <div class="selection">
-                <label>Data element disaggregation to use for data element completeness</label></br>
-                <select id="selectDataElementOperand" class="dataSelect"></select>
+            <div class="selection" id="completenessSection" style="display: none;">
+                <label>Data element disaggregation completeness approach</label><br>
+                <div id="completenessApproachContainer">
+                    <input type="radio" id="proxyApproach" name="completenessApproach" value="proxy" checked>
+                    <label for="proxyApproach">Use one category option combo as proxy</label><br>
+                    <input type="radio" id="anyValueApproach" name="completenessApproach" value="anyValue">
+                    <label for="anyValueApproach">Count as complete when any category option combo has a value</label>
+                    <br><br>
+                    <select id="selectDataElementOperand" class="dataSelect"></select>
+                </div>
             </div>
             <div class="selection">
                 <label>Orgunit level at which data is collected - required for configuration of predictors</label><br>
@@ -81,6 +88,10 @@
                 <div id="indicatorPreviewConsistency"></div>
 
                 <h3>Completeness</h3>
+                <h4>Data elements</h4>
+                <div id="dataElementPreviewCompleteness"></div>
+                <h4>Predictors</h4>
+                <div id="predictorPreviewCompleteness"></div>
                 <h4>Indicators</h4>
                 <div id="indicatorPreviewCompleteness"></div>
 
