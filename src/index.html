@@ -23,6 +23,7 @@
         <ul>
             <li><a href="#tabOverview">Overview</a></li>
             <li><a href="#tabConfigure">Configure</a></li>
+            <li><a href="#tabInfo">Info</a></li>
         </ul>
     
 
@@ -33,10 +34,6 @@
 
         <div id="tabConfigure"> 
             <h1>Configure and create data quality metadata</h1>
-            <p>To do.. Describe the purpose of the app and how to use it.
-            </p>
-
-            <h2>Selection</h2>
             <p>All fields are required!</p>
             <div class="selection">
                 <label>Data set - used to filter data elements</label><br>
@@ -104,7 +101,35 @@
                 <div id="resultTableContainer"></div>
             </div>
 
-        </div>        
+        </div>   
+        <div id="tabInfo">
+            <h1>Configure and create data quality metadata</h1>
+<p>
+    This app helps you set up automated data quality checks for your DHIS2 data elements. It creates three types of quality metrics:
+    <ul>
+        <li><strong>Outliers:</strong> Identifies values that deviate significantly from the average</li>
+        <li><strong>Consistency:</strong> Checks if reported values are consistent across periods</li>
+        <li><strong>Completeness:</strong> Monitors if data is being reported as expected</li>
+    </ul>
+</p>
+
+<p>
+    <strong>How to use:</strong>
+    <ol>
+        <li>Select a data set to filter available data elements</li>
+        <li>Choose the data element you want to configure quality checks for</li>
+        <li>For disaggregated data elements, choose how to handle completeness:
+            <ul>
+                <li>Use one category option as a proxy for all</li>
+                <li>Count as complete when any category has data</li>
+            </ul>
+        </li>
+        <li>Select the organization unit level where data is collected</li>
+        <li>Set the threshold for outlier detection (standard deviations from mean)</li>
+        <li>Click Preview to review the configuration before importing</li>
+    </ol>
+</p>
+        </div>     
     </div>
 </body>
 

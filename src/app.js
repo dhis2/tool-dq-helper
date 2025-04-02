@@ -489,19 +489,32 @@ $("#selectDataElement").on("change", async function () {
         $("#selectDataElementOperand").html(operandHtml);
     } else {
         $("#completenessSection").hide();
-        $("#selectDataElementOperand").val('');
+        $("#selectDataElementOperand").val("");
     }
 
     previewPossible();
 });
 
 // Update radio button change handlers
-$("input[name='completenessApproach']").on("change", function() {
+$("input[name='completenessApproach']").on("change", async function() {
     const isProxyApproach = $("#proxyApproach").is(":checked");
     $("#selectDataElementOperand").toggle(isProxyApproach);
-    if (!isProxyApproach) {
-        $("#selectDataElementOperand").val('');
+    
+    if (isProxyApproach) {
+        // Re-populate operand selector when switching back to proxy approach
+        const selectedElement = $("#selectDataElement").find(":selected");
+        const dataElementId = selectedElement.val();
+        const operandResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:like:${dataElementId}&fields=id,name&paging=false`);
+        const operandHtml = ["<option value=''>[Select Operand]</option>"].concat(
+            operandResponse["dataElementOperands"].map(operand => 
+                `<option value='${operand.id}'>${operand.name}</option>`
+            )
+        ).join("");
+        $("#selectDataElementOperand").html(operandHtml);
+    } else {
+        $("#selectDataElementOperand").val("");
     }
+    
     previewPossible();
 });
 
@@ -528,12 +541,15 @@ async function updateDataElements() {
         const dataElementsResponse = await d2Get(`/api/dataElements?filter=dataSetElements.dataSet.id:like:${dataSetId}&filter=valueType:in:[NUMBER,UNIT_INTERVAL,PERCENTAGE,INTEGER,INTEGER_POSITIVE,INTEGER_NEGATIVE,INTEGER_ZERO_OR_POSITIVE]&fields=name,id,categoryCombo[name]&paging=false`);
         
         const dataElements = [...dataElementsResponse["dataElements"]].sort((a, b) => a.name.localeCompare(b.name));
-        
         const dataElementIds = dataElements.map(obj => obj.id);
         
         // Fetch combined items
         const combinedItemsResponse = await d2Get(`/api/dataElementOperands?filter=dataElement.id:in:[${dataElementIds.join(",")}]&filter=id:like:.&fields=name,id,categoryOptionCombo[name]&paging=false`);
         const combinedItems = [...combinedItemsResponse["dataElementOperands"]].sort((a, b) => a.name.localeCompare(b.name));
+
+        // Fetch already configured elements
+        const configuredOutliers = await d2Get("/api/dataStore/dqConfig/outliers");
+        const configuredElements = new Set(configuredOutliers.flatMap(ol => Object.keys(ol)));
 
         // Incorporate default category elements
         dataElements.forEach(de => {
@@ -550,7 +566,8 @@ async function updateDataElements() {
         const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
             combinedItems.map(obj => {
                 const categoryOptionComboSuffix = obj.categoryOptionCombo ? ` - ${obj.categoryOptionCombo.name}` : "";
-                return `<option value='${obj.id}' id='${obj.id}'>${obj.name}${categoryOptionComboSuffix}</option>`;
+                const isDisabled = configuredElements.has(obj.id.split(".")[0]); // Split to get base DE id
+                return `<option value='${obj.id}' id='${obj.id}' ${isDisabled ? "disabled" : ""}>${obj.name}${categoryOptionComboSuffix}</option>`;
             })
         ).join("");
 
@@ -565,65 +582,76 @@ async function updateDataElements() {
 
 
 window.previewConfiguration = async function () {
-    $("#resultSection").hide();
-    $("#previewSection").hide();
+    // Disable the preview button immediately
+    $("#buttonPreview").prop("disabled", true);
 
-    currentImport = {};
+    try {
+        $("#resultSection").hide();
+        $("#previewSection").hide();
 
-    var deSourceId = $("#selectDataElement").find(":selected").val();
-    var dsSourceId = $("#selectDataSet").val();
+        currentImport = {};
 
-    var dataElement; 
-    if (deSourceId.length === 23) {
-        let dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deSourceId + "&fields=name,shortName,id");
-        dataElement = dataElementOperands["dataElementOperands"][0];
-    }
-    else {
-        dataElement = await d2Get("/api/dataElements/" + deSourceId + "?fields=name,shortName,id");
-    }
-    
-    var dataSet = await d2Get("/api/dataSets/" + dsSourceId + "?fields=name,shortName,id,periodType");
-    if (dataSet.periodType != "Monthly") {
-        alert("Only monthly data sets are automatically supported, configuration of this dataset must be updated manually.");
-    }
+        var deSourceId = $("#selectDataElement").find(":selected").val();
+        var dsSourceId = $("#selectDataSet").val();
 
-    // Outlier
-    let outlierMetadata = await configureOutlierMetadata(dataElement);
-    $("#dataElementPreviewOutlier").html(makeTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]));
-    $("#predictorPreviewOutlier").html(makeTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
-    $("#indicatorPreviewOutlier").html(makeTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
-
-    // Consistency
-    let consistencyMetadata = await configureConsistencyMetadata(dataElement);
-    $("#dataElementPreviewConsistency").html(makeTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]));
-    $("#predictorPreviewConsistency").html(makeTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
-    $("#indicatorPreviewConsistency").html(makeTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
-
-    // Completeness
-    let completenessMetadata;
-    if ($("#completenessApproachContainer").is(":visible")) {
-        const isProxyApproach = $("#proxyApproach").is(":checked");
-        
-        if (isProxyApproach) {
-            const deoSourceId = $("#selectDataElementOperand").val();
-            const dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deoSourceId + "&fields=name,shortName,id");
+        var dataElement; 
+        if (deSourceId.length === 23) {
+            let dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deSourceId + "&fields=name,shortName,id");
             dataElement = dataElementOperands["dataElementOperands"][0];
-            completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
-        } else {
-            completenessMetadata = await configureCompletenessDisaggregatedMetadata(dataElement, dataSet);
         }
-    } else {
-        completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
+        else {
+            dataElement = await d2Get("/api/dataElements/" + deSourceId + "?fields=name,shortName,id");
+        }
+        
+        var dataSet = await d2Get("/api/dataSets/" + dsSourceId + "?fields=name,shortName,id,periodType");
+        if (dataSet.periodType != "Monthly") {
+            alert("Only monthly data sets are automatically supported, configuration of this dataset must be updated manually.");
+        }
+
+        // Outlier
+        let outlierMetadata = await configureOutlierMetadata(dataElement);
+        $("#dataElementPreviewOutlier").html(makeTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]));
+        $("#predictorPreviewOutlier").html(makeTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
+        $("#indicatorPreviewOutlier").html(makeTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+
+        // Consistency
+        let consistencyMetadata = await configureConsistencyMetadata(dataElement);
+        $("#dataElementPreviewConsistency").html(makeTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]));
+        $("#predictorPreviewConsistency").html(makeTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]));
+        $("#indicatorPreviewConsistency").html(makeTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+
+        // Completeness
+        let completenessMetadata;
+        if ($("#completenessApproachContainer").is(":visible")) {
+            const isProxyApproach = $("#proxyApproach").is(":checked");
+            
+            if (isProxyApproach) {
+                const deoSourceId = $("#selectDataElementOperand").val();
+                const dataElementOperands = await d2Get("/api/dataElementOperands?filter=id:eq:" + deoSourceId + "&fields=name,shortName,id");
+                dataElement = dataElementOperands["dataElementOperands"][0];
+                completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
+            } else {
+                completenessMetadata = await configureCompletenessDisaggregatedMetadata(dataElement, dataSet);
+            }
+        } else {
+            completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
+        }
+
+        $("#dataElementPreviewCompleteness").html(makeTable(completenessMetadata["dataElements"] || [], ["name", "shortName", "description"]));
+        $("#predictorPreviewCompleteness").html(makeTable(completenessMetadata["predictors"] || [], ["name", "shortName", "generator[expression]"]));
+        $("#indicatorPreviewCompleteness").html(makeTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
+
+
+        $("#previewSection").show();
+        $("#buttonImport").attr("disabled", false);
+
+    } catch (error) {
+        console.error("Preview configuration failed:", error);
+        alert("Failed to preview configuration: " + error.message);
+    } finally {
+        // Re-run validation to determine if button should be enabled
+        previewPossible();
     }
-
-    $("#dataElementPreviewCompleteness").html(makeTable(completenessMetadata["dataElements"] || [], ["name", "shortName", "description"]));
-    $("#predictorPreviewCompleteness").html(makeTable(completenessMetadata["predictors"] || [], ["name", "shortName", "generator[expression]"]));
-    $("#indicatorPreviewCompleteness").html(makeTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]));
-
-
-    $("#previewSection").show();
-    $("#buttonImport").attr("disabled", false);
-
 };
 
 window.importMetadata = async function () {
