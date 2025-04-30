@@ -453,19 +453,120 @@ function previewPossible() {
 }
 
 
-
-
-
 async function listConfig() {
-    let outliers = await d2Get("/api/dataStore/dqConfig/outliers");
-    var htmlCode = "";
-    for (var ol of outliers) {
-        for (var id in ol) {
-            htmlCode += "<h3>" + ol[id]["§NAME§"] + "</h3>";
-            htmlCode += "<pre><code>" + JSON.stringify(ol[id], undefined, 2) + "</code></pre>";
-        }
+    try {
+        // Fetch all configurations
+        const baseConfig = await d2Get("/api/dataStore/dqConfig/baseConfig");
+        const outliers = await d2Get("/api/dataStore/dqConfig/outliers");
+        const completeness = await d2Get("/api/dataStore/dqConfig/completeness");
+        const consistency = await d2Get("/api/dataStore/dqConfig/consistency");
+
+        // Create a map of all configured data elements
+        const configuredElements = new Map();
+
+        // Helper function to add configuration to the map
+        const addToMap = (array, type) => {
+            array.forEach(item => {
+                const [[id, config]] = Object.entries(item);
+                
+                // For completeness configs, try to match existing elements using base ID
+                if (type === "completeness") {
+                    const baseId = id.split(".")[0];  // Get base ID without the .XXX part
+                    
+                    // First try to find existing config with full ID
+                    if (configuredElements.has(id)) {
+                        configuredElements.get(id).configs[type] = config;
+                        configuredElements.get(id).dataSet = config["§NAME_DS§"]; // Update dataset name
+                    }
+                    // Then try to find existing config with base ID
+                    else if (configuredElements.has(baseId)) {
+                        configuredElements.get(baseId).configs[type] = config;
+                        configuredElements.get(baseId).dataSet = config["§NAME_DS§"]; // Update dataset name
+                    }
+                    // If no match, create new entry
+                    else {
+                        configuredElements.set(baseId, {
+                            name: config["§NAME§"],
+                            dataSet: config["§NAME_DS§"],
+                            configs: { [type]: config }
+                        });
+                    }
+                }
+                // For other types, use normal mapping but preserve existing dataset name if available
+                else {
+                    if (!configuredElements.has(id)) {
+                        configuredElements.set(id, {
+                            name: config["§NAME§"],
+                            dataSet: "N/A",
+                            configs: {}
+                        });
+                    }
+                    configuredElements.get(id).configs[type] = config;
+                }
+            });
+        };
+
+        // Process each configuration type - order matters here
+        addToMap(outliers, "outliers");
+        addToMap(consistency, "consistency");
+        addToMap(completeness, "completeness");  // Process completeness last
+
+        // Generate HTML
+        let htmlCode = `
+            <h2>Data Quality Configuration Overview</h2>
+            <div class="baseConfig">
+                <h3>Base Configuration</h3>
+                <table class="generalTable">
+                    <tr>
+                        <th>Configuration</th>
+                        <th>Group ID</th>
+                    </tr>
+                    ${Object.entries(baseConfig)
+        .map(([key, value]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td>${value}</td>
+                            </tr>
+                        `).join("")}
+                </table>
+            </div>
+            <h3>Configured Data Elements</h3>
+        `;
+
+        // Add configured elements
+        configuredElements.forEach((config, id) => {
+            htmlCode += `
+                <div class="elementConfig">
+                    <h4>${config.name}</h4>
+                    <p><strong>Data Set:</strong> ${config.dataSet}</p>
+                    <p><strong>ID:</strong> ${id}</p>
+                    <div class="configTypes">
+                        ${Object.entries(config.configs).map(([type, details]) => `
+                            <div class="configType">
+                                <h5>${type.charAt(0).toUpperCase() + type.slice(1)}</h5>
+                                <ul>
+                                    ${type === "outliers" ? `
+                                        <li>Standard deviations: ${details["§VAL_STDDEV§"]}</li>
+                                        <li>Organisation unit level: ${details["§OU_LEVEL§"]}</li>
+                                    ` : type === "completeness" ? `
+                                        <li>Indicator ID: ${details["§IN_COMPL§"]}</li>
+                                    ` : `
+                                        <li>Organisation unit level: ${details["§OU_LEVEL§"]}</li>
+                                        <li>Consistency indicator: ${details["§IN_CONS_PROP§"]}</li>
+                                    `}
+                                </ul>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            `;
+        });
+
+        $("#configuredOutliers").html(htmlCode);
+    } catch (error) {
+        console.error("Failed to list configurations:", error);
+        $("#configuredOutliers").html(`<p class="error">Failed to load configurations: ${error.message}</p>`);
     }
-    $("#configuredOutliers").html(htmlCode);
 }
 
 $("#selectDataElement").on("change", async function () {
