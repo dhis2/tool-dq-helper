@@ -1464,11 +1464,13 @@ async function deleteConfig(deId, deName) {
                         }
                     }
 
+                    // Dev inspection — full per-check detail on the browser console
                     console.log("perCheckResults:", perCheckResults);
 
                     // Build summary notification
                     var summaryParts = ["Config removed."];
                     var checkLabels = { outliers: "Outlier", consistency: "Consistency", completeness: "Completeness" };
+                    var anySkippedOrFailed = false;
                     for (var si = 0; si < checkTypes.length; si++) {
                         var sType = checkTypes[si];
                         var result = perCheckResults[sType];
@@ -1476,15 +1478,21 @@ async function deleteConfig(deId, deName) {
                         if (result.deleted) {
                             summaryParts.push(checkLabels[sType] + " metadata: deleted.");
                         } else if (result.deleteError) {
+                            anySkippedOrFailed = true;
                             summaryParts.push(checkLabels[sType] + " metadata: delete failed (" + result.deleteError + ").");
                         } else {
-                            // Skipped — report first failure reason with label
-                            var firstFail = result.failures[0];
-                            var failLabel = labelForPlaceholder(firstFail.placeholderKey);
-                            summaryParts.push(checkLabels[sType] + " metadata: skipped (" + failLabel + " '" + firstFail.id + "' " + firstFail.reason + ").");
+                            anySkippedOrFailed = true;
+                            // Skipped — report first failure reason with label if available
+                            if (result.failures && result.failures.length > 0) {
+                                var firstFail = result.failures[0];
+                                var failLabel = labelForPlaceholder(firstFail.placeholderKey);
+                                summaryParts.push(checkLabels[sType] + " metadata: skipped (" + failLabel + " '" + firstFail.id + "' " + firstFail.reason + ").");
+                            } else {
+                                summaryParts.push(checkLabels[sType] + " metadata: skipped.");
+                            }
                         }
                     }
-                    showNotification(summaryParts.join(" "), "success");
+                    showNotification(summaryParts.join(" "), anySkippedOrFailed ? "warning" : "success");
                 } else {
                     showNotification("Configuration for '" + deName + "' removed successfully.", "success");
                 }
