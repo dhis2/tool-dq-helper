@@ -1015,7 +1015,10 @@ async function deleteConfig(deId, deName) {
                     if (pdIds.length) await removeFromPdGroup(baseConfig.predictorGroupConsistency, pdIds);
                 }
 
-                // Process completeness — match on both exact key and base ID
+                // Process completeness — dual match: listConfig normalizes completeness
+                // cards to the bare DE id, so a bare deId passed in here must still
+                // match entries whose stored key is an operand id (deId.cocId), and
+                // an operand deId must match a bare stored key for the same DE.
                 const completenessEntry = completeness.find(function (item) {
                     const key = Object.keys(item)[0];
                     return key === deId || key.split(".")[0] === deIdBase;
