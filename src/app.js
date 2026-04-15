@@ -28,16 +28,17 @@ function initOrRefreshTomSelect(id) {
     const elem = document.getElementById(id);
     if (!elem) return;
 
-    // Pull the placeholder text from the empty-value option (our convention is
-    // "<option value=''>[Select X]</option>") and hide that option from the
-    // dropdown so it doesn't render as a selectable row alongside the user's
-    // typed search. Keeping allowEmptyOption=true preserves the empty-string
-    // state for the native select + our downstream previewPossible() checks.
+    // Our option templates use "<option value=''>[Select X]</option>" to give
+    // native selects a visible prompt. Tom Select would render that text as
+    // the current selection (because allowEmptyOption=true keeps empty valid)
+    // and it leaks into the control alongside the search input. Strip the
+    // text from the empty option and hoist it onto the placeholder config so
+    // Tom Select shows it in the proper placeholder slot instead.
     let placeholder = "";
     const emptyOpt = elem.querySelector("option[value='']");
     if (emptyOpt) {
         placeholder = emptyOpt.textContent;
-        emptyOpt.setAttribute("data-hidden", "true");
+        emptyOpt.textContent = "";
     }
 
     tomSelectInstances[id] = new TomSelect(elem, {
@@ -45,22 +46,7 @@ function initOrRefreshTomSelect(id) {
         allowEmptyOption: true,
         maxOptions: null,
         sortField: null, // preserve DOM order (already sorted upstream)
-        placeholder: placeholder,
-        hidePlaceholder: false,
-        render: {
-            option: function (data, escape) {
-                // Hide the empty-value "[Select X]" row from the dropdown
-                if (data.value === "") return "";
-                return "<div>" + escape(data.text) + "</div>";
-            },
-            item: function (data, escape) {
-                // When the empty option is the current value, render nothing
-                // so the placeholder stays visible instead of the "[Select X]"
-                // label leaking onto the control while typing.
-                if (data.value === "") return "";
-                return "<div>" + escape(data.text) + "</div>";
-            }
-        }
+        placeholder: placeholder
     });
 }
 
