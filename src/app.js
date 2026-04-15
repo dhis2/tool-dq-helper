@@ -782,6 +782,56 @@ async function listConfig() {
         addToMap(consistency, "consistency");
         addToMap(completeness, "completeness");
 
+        // --- Step 1: Collect all referenced metadata IDs grouped by type ---
+        const referencedByType = { dataElement: new Set(), predictor: new Set(), indicator: new Set() };
+        const allLabelMaps = [OUTLIER_METADATA_LABELS, CONSISTENCY_METADATA_LABELS, COMPLETENESS_METADATA_LABELS];
+        configuredElements.forEach(function (entry) {
+            Object.values(entry.configs).forEach(function (cfg) {
+                allLabelMaps.forEach(function (labelMap) {
+                    Object.keys(labelMap).forEach(function (placeholder) {
+                        const type = labelMap[placeholder][0];
+                        const id = cfg[placeholder];
+                        if (id && referencedByType[type]) referencedByType[type].add(id);
+                    });
+                });
+            });
+        });
+
+        // --- Step 2: Batch-query each type to find which IDs still exist ---
+        const endpointByType = { dataElement: "dataElements", predictor: "predictors", indicator: "indicators" };
+        const existingByType = { dataElement: null, predictor: null, indicator: null };
+        try {
+            for (const type of Object.keys(referencedByType)) {
+                const ids = Array.from(referencedByType[type]);
+                if (ids.length === 0) continue;
+                const endpoint = endpointByType[type];
+                const result = await d2Get("/api/" + endpoint + "?filter=id:in:[" + ids.join(",") + "]&fields=id&paging=false");
+                existingByType[type] = new Set((result[endpoint] || []).map(function (o) { return o.id; }));
+            }
+        } catch (metaCheckErr) {
+            console.warn("Could not check referenced metadata existence; warnings will be suppressed.", metaCheckErr);
+        }
+
+        // --- Step 3: Compute per-card missing metadata ---
+        // Only flag an ID as missing if we successfully fetched that type's existence set (non-null)
+        const missingByCardId = {};
+        configuredElements.forEach(function (entry, cardId) {
+            const missing = [];
+            Object.values(entry.configs).forEach(function (cfg) {
+                allLabelMaps.forEach(function (labelMap) {
+                    Object.keys(labelMap).forEach(function (placeholder) {
+                        const type = labelMap[placeholder][0];
+                        const label = labelMap[placeholder][1];
+                        const id = cfg[placeholder];
+                        if (id && existingByType[type] !== null && !existingByType[type].has(id)) {
+                            missing.push({ type: type, label: label, id: id });
+                        }
+                    });
+                });
+            });
+            missingByCardId[cardId] = missing;
+        });
+
         if (configuredElements.size === 0) {
             el("configuredOutliers").innerHTML =
                 "<div class=\"empty-state\">" +
@@ -838,6 +888,14 @@ async function listConfig() {
                 }
                 htmlCode += "<span class=\"dhis2-chip dhis2-chip-active\">" + escapeHtml(label) + "</span>";
             });
+            // Warning chip for missing referenced metadata
+            const missing = missingByCardId[id] || [];
+            const missingChip = missing.length > 0
+                ? "<span class=\"dhis2-chip dhis2-chip-warning\" title=\"" +
+                    escapeHtml(missing.map(function (m) { return m.type + ": " + m.label + " (" + m.id + ")"; }).join("\n")) +
+                    "\">\u26a0 " + missing.length + " missing metadata</span>"
+                : "";
+            htmlCode += missingChip;
             htmlCode += "</div>";
 
             // Collapsible details (per config type)

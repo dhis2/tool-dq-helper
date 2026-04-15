@@ -499,6 +499,11 @@ body {
     color: var(--dhis2-text-secondary);
 }
 
+.dhis2-chip-warning {
+    background: var(--dhis2-warning-bg);
+    color: var(--dhis2-warning);
+}
+
 /* 15. Edit Form
    ========================================================================== */
 .edit-form {
