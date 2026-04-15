@@ -2,10 +2,7 @@
   "name": "tool-dq-config",
   "description": "Tool to configure data quality metrics",
   "version": "0.1.7",
-  "dependencies": {
-    "jquery": "^3.7.1",
-    "webpack-jquery-ui": "^2.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",

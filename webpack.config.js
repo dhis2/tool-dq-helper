@@ -114,11 +114,6 @@ const webpackConfig = {
                 { from: "./src/resources/dhis-header-bar.js", to: "resources" }
             ]
         }),
-        new webpack.ProvidePlugin({
-            $: "jquery",
-            jQuery: "jquery",
-            "window.jQuery": "jquery"
-        }),
         !isDevBuild ? undefined : new webpack.DefinePlugin({
             DHIS_CONFIG: JSON.stringify(dhisConfig),
         }),
