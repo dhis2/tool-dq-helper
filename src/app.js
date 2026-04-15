@@ -1073,16 +1073,15 @@ async function deleteConfig(deId, deName) {
 async function editOutlierThreshold(deId, cardElement) {
     // Find the outlier config for this data element
     const outliers = await d2Get("/api/dataStore/dqConfig/outliers");
-    const baseId = deId.split(".")[0];
     const entryIndex = outliers.findIndex(function (item) {
-        return Object.keys(item)[0] === baseId;
+        return Object.keys(item)[0] === deId;
     });
     if (entryIndex === -1) {
         showNotification("Outlier configuration not found.", "error");
         return;
     }
 
-    const config = outliers[entryIndex][baseId];
+    const config = outliers[entryIndex][deId];
     const currentSD = config["\u00a7VAL_STDDEV\u00a7"];
 
     // Show inline edit form
@@ -1190,7 +1189,7 @@ async function editOutlierThreshold(deId, cardElement) {
 
             // Update dataStore config
             config["\u00a7VAL_STDDEV\u00a7"] = newSD;
-            outliers[entryIndex] = { [baseId]: config };
+            outliers[entryIndex] = { [deId]: config };
             await d2PutJson("/api/dataStore/dqConfig/outliers", outliers);
 
             showNotification("Outlier threshold updated to " + newSD + " SD.", "success");
