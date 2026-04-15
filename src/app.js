@@ -1396,7 +1396,13 @@ async function updateDataElements() {
 
         el("selectDataElement").innerHTML = dataElementHtml;
         initOrRefreshTomSelect("selectDataElement");
-        // Reset downstream selects
+        // Reset downstream selects — destroy any stale Tom Select instance on
+        // selectDisaggregation before clearing innerHTML so no orphaned wrapper
+        // holds a reference to an empty native select.
+        if (tomSelectInstances["selectDisaggregation"]) {
+            tomSelectInstances["selectDisaggregation"].destroy();
+            delete tomSelectInstances["selectDisaggregation"];
+        }
         el("selectDisaggregation").innerHTML = "";
         el("disaggregationSection").style.display = "none";
         el("completenessSection").style.display = "none";
