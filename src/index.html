@@ -42,7 +42,13 @@
             </div>
             <div class="modal-body">
                 <p id="deleteModalMessage"></p>
-                <p class="dhis2-notice">The DHIS2 metadata (data elements, predictors, indicators) will not be deleted.</p>
+                <p style="font-size: 13px; color: var(--dhis2-text-secondary);">
+                    The DHIS2 metadata (data elements, predictors, indicators) will not be deleted by default.
+                </p>
+                <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                    <input type="checkbox" id="deleteMetadataCheckbox">
+                    <span>Also delete the generated DHIS2 metadata (only if unreferenced, unmodified, and owned by this app)</span>
+                </label>
             </div>
             <div class="modal-footer">
                 <button id="btnCancelDelete" class="dhis2-btn-secondary">Cancel</button>

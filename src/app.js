@@ -166,7 +166,284 @@ function switchTab(tabName) {
 }
 
 // ============================================================
-// 5. METADATA CONFIGURATION
+// 5a. METADATA DELETION HELPERS
+// ============================================================
+
+/**
+ * Build a map from placeholder key (e.g. "§DE_NOUTLIER_VAL§") to
+ * { name, description, shortName, kind } from the template functions.
+ */
+function collectTemplateEntries() {
+    var map = {};
+    var bundles = [templateOutlier(), templateConsistency(), templateCompleteness(), templateCompletenessDisaggregated()];
+    for (var b = 0; b < bundles.length; b++) {
+        var bundle = bundles[b];
+        var kinds = ["dataElements", "predictors", "indicators"];
+        for (var k = 0; k < kinds.length; k++) {
+            var kind = kinds[k];
+            var entries = bundle[kind] || [];
+            for (var e = 0; e < entries.length; e++) {
+                var entry = entries[e];
+                if (entry.id && entry.id.indexOf("\u00a7") === 0) {
+                    map[entry.id] = {
+                        name: entry.name,
+                        description: entry.description,
+                        shortName: entry.shortName,
+                        kind: kind.slice(0, -1) // "dataElement" | "predictor" | "indicator"
+                    };
+                }
+            }
+        }
+    }
+    return map;
+}
+
+/**
+ * Convert a template string (containing §PLACEHOLDER§ tokens) into a
+ * regex that matches any substitution at those positions.
+ */
+function templateToRegex(templateStr) {
+    var parts = templateStr.split(/\u00a7[^\u00a7]*\u00a7/);
+    var pattern = parts
+        .map(function (p) { return p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); })
+        .join(".*?");
+    return new RegExp("^" + pattern + "$");
+}
+
+/**
+ * Derive the metadata kind from a placeholder key prefix.
+ * Returns "dataElement" | "predictor" | "indicator" | null.
+ */
+function kindFromPlaceholder(placeholderKey) {
+    if (placeholderKey.indexOf("\u00a7DE_") === 0) return "dataElement";
+    if (placeholderKey.indexOf("\u00a7PD_") === 0) return "predictor";
+    if (placeholderKey.indexOf("\u00a7IN_") === 0) return "indicator";
+    return null;
+}
+
+/**
+ * Build candidate lists for each check type from the stored config entries.
+ * Returns { outliers: [{id, placeholderKey, kind}, ...], consistency: [...], completeness: [...] }
+ * Only includes values that look like real UIDs (string, length 11).
+ */
+function buildCandidateSets(outlierEntry, consistencyEntry, completenessEntry, deId) {
+    var sets = {};
+    var labelMaps = {
+        outliers: OUTLIER_METADATA_LABELS,
+        consistency: CONSISTENCY_METADATA_LABELS,
+        completeness: COMPLETENESS_METADATA_LABELS
+    };
+    var entries = {
+        outliers: outlierEntry ? outlierEntry[deId] : null,
+        consistency: consistencyEntry ? consistencyEntry[deId] : null,
+        completeness: null
+    };
+    if (completenessEntry) {
+        var cKey = Object.keys(completenessEntry)[0];
+        entries.completeness = completenessEntry[cKey];
+    }
+
+    for (var checkType in labelMaps) {
+        var cfg = entries[checkType];
+        if (!cfg) continue;
+        var candidates = [];
+        var lm = labelMaps[checkType];
+        for (var placeholder in lm) {
+            var val = cfg[placeholder];
+            if (typeof val === "string" && val.length === 11) {
+                var kind = kindFromPlaceholder(placeholder);
+                if (kind) {
+                    candidates.push({ id: val, placeholderKey: placeholder, kind: kind });
+                }
+            }
+        }
+        if (candidates.length > 0) {
+            sets[checkType] = candidates;
+        }
+    }
+    return sets;
+}
+
+/**
+ * Fetch the member IDs of each app-managed group, bucketed by metadata kind.
+ * Returns { dataElement: Set, predictor: Set, indicator: Set }.
+ */
+async function fetchOwnedIds(config) {
+    var owned = { dataElement: new Set(), predictor: new Set(), indicator: new Set() };
+
+    // Data element group
+    try {
+        var deGroup = await d2Get("/api/dataElementGroups/" + config.dataElementGroup + "?fields=dataElements[id]&paging=false");
+        (deGroup.dataElements || []).forEach(function (o) { owned.dataElement.add(o.id); });
+    } catch (e) {
+        console.warn("fetchOwnedIds: failed to fetch dataElementGroup", e);
+    }
+
+    // Indicator group
+    try {
+        var inGroup = await d2Get("/api/indicatorGroups/" + config.indicatorGroup + "?fields=indicators[id]&paging=false");
+        (inGroup.indicators || []).forEach(function (o) { owned.indicator.add(o.id); });
+    } catch (e) {
+        console.warn("fetchOwnedIds: failed to fetch indicatorGroup", e);
+    }
+
+    // All predictor groups
+    var pdGroupIds = [
+        config.predictorGroup,
+        config.predictorGroupThreshold,
+        config.predictorGroupAnalysis,
+        config.predictorGroupConsistency
+    ].filter(Boolean);
+    // Deduplicate
+    var seen = {};
+    var uniquePdGroupIds = [];
+    for (var i = 0; i < pdGroupIds.length; i++) {
+        if (!seen[pdGroupIds[i]]) {
+            seen[pdGroupIds[i]] = true;
+            uniquePdGroupIds.push(pdGroupIds[i]);
+        }
+    }
+    for (var j = 0; j < uniquePdGroupIds.length; j++) {
+        try {
+            var pdGroup = await d2Get("/api/predictorGroups/" + uniquePdGroupIds[j] + "?fields=predictors[id]&paging=false");
+            (pdGroup.predictors || []).forEach(function (o) { owned.predictor.add(o.id); });
+        } catch (e) {
+            console.warn("fetchOwnedIds: failed to fetch predictorGroup " + uniquePdGroupIds[j], e);
+        }
+    }
+
+    return owned;
+}
+
+/**
+ * Evaluate a single check type's candidates against all four safety gates.
+ * Returns { ok: boolean, failures: [{id, placeholderKey, kind, reason}, ...] }.
+ */
+async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMap) {
+    var failures = [];
+
+    // Gate 1: Ownership — each candidate must be in the app-managed group
+    for (var i = 0; i < candidates.length; i++) {
+        var c = candidates[i];
+        if (!ownedIds[c.kind] || !ownedIds[c.kind].has(c.id)) {
+            failures.push({ id: c.id, placeholderKey: c.placeholderKey, kind: c.kind, reason: "not owned by app" });
+        }
+    }
+    if (failures.length > 0) return { ok: false, failures: failures };
+
+    // Gate 2: Edit-time — batch-fetch items, check lastUpdated - created < 5000ms
+    var endpointByKind = { dataElement: "dataElements", predictor: "predictors", indicator: "indicators" };
+    var fetchedByKind = {}; // kind -> { id -> item }
+    var kindsPresent = {};
+    for (var ci = 0; ci < candidates.length; ci++) {
+        kindsPresent[candidates[ci].kind] = true;
+    }
+    for (var kind in kindsPresent) {
+        var ids = candidates.filter(function (c) { return c.kind === kind; }).map(function (c) { return c.id; });
+        var endpoint = endpointByKind[kind];
+        var result = await d2Get("/api/" + endpoint + "?filter=id:in:[" + ids.join(",") + "]&fields=id,name,description,created,lastUpdated&paging=false");
+        var items = result[endpoint] || [];
+        var itemMap = {};
+        for (var ii = 0; ii < items.length; ii++) {
+            itemMap[items[ii].id] = items[ii];
+        }
+        fetchedByKind[kind] = itemMap;
+
+        // Check for missing items (deleted out-of-band)
+        for (var mi = 0; mi < ids.length; mi++) {
+            if (!itemMap[ids[mi]]) {
+                var missingCandidate = candidates.find(function (c) { return c.id === ids[mi]; });
+                failures.push({ id: ids[mi], placeholderKey: missingCandidate.placeholderKey, kind: kind, reason: "no longer exists" });
+            }
+        }
+    }
+    if (failures.length > 0) return { ok: false, failures: failures };
+
+    // Check edit-time threshold
+    for (var ti = 0; ti < candidates.length; ti++) {
+        var tc = candidates[ti];
+        var item = fetchedByKind[tc.kind][tc.id];
+        var created = new Date(item.created).getTime();
+        var lastUpdated = new Date(item.lastUpdated).getTime();
+        if (lastUpdated - created >= 5000) {
+            failures.push({ id: tc.id, placeholderKey: tc.placeholderKey, kind: tc.kind, reason: "modified after creation" });
+        }
+    }
+    if (failures.length > 0) return { ok: false, failures: failures };
+
+    // Gate 3: Template match — name and description must match the template regex
+    for (var tmi = 0; tmi < candidates.length; tmi++) {
+        var tmc = candidates[tmi];
+        var tmItem = fetchedByKind[tmc.kind][tmc.id];
+        var tmpl = templateMap[tmc.placeholderKey];
+        if (!tmpl) {
+            failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "no template found for placeholder" });
+            continue;
+        }
+        var nameRegex = templateToRegex(tmpl.name);
+        var descRegex = templateToRegex(tmpl.description);
+        if (!nameRegex.test(tmItem.name || "")) {
+            failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "name no longer matches template" });
+        } else if (!descRegex.test(tmItem.description || "")) {
+            failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "description no longer matches template" });
+        }
+    }
+    if (failures.length > 0) return { ok: false, failures: failures };
+
+    // Gate 4: Dry-run DELETE — POST /api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE
+    var dryRunPayload = { dataElements: [], predictors: [], indicators: [] };
+    for (var dri = 0; dri < candidates.length; dri++) {
+        var drc = candidates[dri];
+        var pluralKind = drc.kind + "s";
+        dryRunPayload[pluralKind].push({ id: drc.id });
+    }
+    // Remove empty arrays
+    if (dryRunPayload.dataElements.length === 0) delete dryRunPayload.dataElements;
+    if (dryRunPayload.predictors.length === 0) delete dryRunPayload.predictors;
+    if (dryRunPayload.indicators.length === 0) delete dryRunPayload.indicators;
+
+    var dryRunResult = await d2PostJson(
+        "/api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE",
+        dryRunPayload
+    );
+
+    // Walk typeReports to find errors
+    var typeReports = (dryRunResult && dryRunResult.typeReports) || [];
+    var errorIds = {};
+    for (var tri = 0; tri < typeReports.length; tri++) {
+        var objectReports = (typeReports[tri].objectReports || []);
+        for (var ori = 0; ori < objectReports.length; ori++) {
+            var objReport = objectReports[ori];
+            if (objReport.errorReports && objReport.errorReports.length > 0) {
+                errorIds[objReport.uid] = objReport.errorReports[0].message || "dry-run conflict";
+            }
+        }
+    }
+    for (var eri = 0; eri < candidates.length; eri++) {
+        var erc = candidates[eri];
+        if (errorIds[erc.id]) {
+            failures.push({ id: erc.id, placeholderKey: erc.placeholderKey, kind: erc.kind, reason: "referenced elsewhere (" + errorIds[erc.id] + ")" });
+        }
+    }
+
+    return { ok: failures.length === 0, failures: failures };
+}
+
+/**
+ * Build a human-readable label for a placeholder from the METADATA_LABELS maps.
+ */
+function labelForPlaceholder(placeholderKey) {
+    var allMaps = [OUTLIER_METADATA_LABELS, CONSISTENCY_METADATA_LABELS, COMPLETENESS_METADATA_LABELS];
+    for (var i = 0; i < allMaps.length; i++) {
+        if (allMaps[i][placeholderKey]) {
+            return allMaps[i][placeholderKey][1];
+        }
+    }
+    return placeholderKey;
+}
+
+// ============================================================
+// 5b. METADATA CONFIGURATION
 // ============================================================
 
 async function configureConsistencyMetadata(deSource) {
@@ -1011,8 +1288,9 @@ async function listConfig() {
 }
 
 async function deleteConfig(deId, deName) {
-    // Show confirmation modal
+    // Show confirmation modal and reset checkbox
     el("deleteModalMessage").textContent = "Remove DQ configuration for '" + deName + "'?";
+    el("deleteMetadataCheckbox").checked = false;
     showModal("deleteModal");
 
     return new Promise(function (resolve) {
@@ -1027,6 +1305,7 @@ async function deleteConfig(deId, deName) {
 
         async function onConfirm() {
             cleanup();
+            var alsoDeleteMetadata = el("deleteMetadataCheckbox").checked;
             showLoading();
             try {
                 // Load all dataStore arrays
@@ -1131,7 +1410,85 @@ async function deleteConfig(deId, deName) {
                 await d2PutJson("/api/dataStore/dqConfig/consistency", newConsistency);
                 await d2PutJson("/api/dataStore/dqConfig/completeness", newCompleteness);
 
-                showNotification("Configuration for '" + deName + "' removed successfully.", "success");
+                // --- Optional metadata deletion ---
+                if (alsoDeleteMetadata) {
+                    var candidateSets = buildCandidateSets(
+                        outlierEntry, consistencyEntry, completenessEntry,
+                        deId
+                    );
+                    var ownedIds = await fetchOwnedIds(baseConfig);
+                    var templateMap = collectTemplateEntries();
+                    var perCheckResults = {};
+                    var checkTypes = ["outliers", "consistency", "completeness"];
+
+                    for (var cti = 0; cti < checkTypes.length; cti++) {
+                        var checkType = checkTypes[cti];
+                        if (!candidateSets[checkType]) continue;
+                        try {
+                            perCheckResults[checkType] = await evaluateCheckForDeletion(
+                                candidateSets[checkType], baseConfig, ownedIds, templateMap
+                            );
+                            perCheckResults[checkType].candidates = candidateSets[checkType];
+                        } catch (evalError) {
+                            perCheckResults[checkType] = {
+                                ok: false,
+                                failures: [{ id: "N/A", placeholderKey: "N/A", kind: "N/A", reason: "evaluation error: " + evalError.message }],
+                                candidates: candidateSets[checkType]
+                            };
+                        }
+                    }
+
+                    // Real delete per check where ok=true
+                    for (var dci = 0; dci < checkTypes.length; dci++) {
+                        var dcType = checkTypes[dci];
+                        if (!perCheckResults[dcType] || !perCheckResults[dcType].ok) continue;
+                        var deletePayload = { dataElements: [], predictors: [], indicators: [] };
+                        var dcCandidates = perCheckResults[dcType].candidates;
+                        for (var pi = 0; pi < dcCandidates.length; pi++) {
+                            var pluralKey = dcCandidates[pi].kind + "s";
+                            deletePayload[pluralKey].push({ id: dcCandidates[pi].id });
+                        }
+                        if (deletePayload.dataElements.length === 0) delete deletePayload.dataElements;
+                        if (deletePayload.predictors.length === 0) delete deletePayload.predictors;
+                        if (deletePayload.indicators.length === 0) delete deletePayload.indicators;
+
+                        try {
+                            await d2PostJson(
+                                "/api/metadata?importStrategy=DELETE&atomicMode=ALL",
+                                deletePayload
+                            );
+                            perCheckResults[dcType].deleted = true;
+                        } catch (delError) {
+                            perCheckResults[dcType].deleted = false;
+                            perCheckResults[dcType].deleteError = delError.message;
+                        }
+                    }
+
+                    console.log("perCheckResults:", perCheckResults);
+
+                    // Build summary notification
+                    var summaryParts = ["Config removed."];
+                    var checkLabels = { outliers: "Outlier", consistency: "Consistency", completeness: "Completeness" };
+                    for (var si = 0; si < checkTypes.length; si++) {
+                        var sType = checkTypes[si];
+                        var result = perCheckResults[sType];
+                        if (!result) continue;
+                        if (result.deleted) {
+                            summaryParts.push(checkLabels[sType] + " metadata: deleted.");
+                        } else if (result.deleteError) {
+                            summaryParts.push(checkLabels[sType] + " metadata: delete failed (" + result.deleteError + ").");
+                        } else {
+                            // Skipped — report first failure reason with label
+                            var firstFail = result.failures[0];
+                            var failLabel = labelForPlaceholder(firstFail.placeholderKey);
+                            summaryParts.push(checkLabels[sType] + " metadata: skipped (" + failLabel + " '" + firstFail.id + "' " + firstFail.reason + ").");
+                        }
+                    }
+                    showNotification(summaryParts.join(" "), "success");
+                } else {
+                    showNotification("Configuration for '" + deName + "' removed successfully.", "success");
+                }
+
                 await listConfig();
             } catch (error) {
                 showNotification("Failed to remove configuration: " + error.message, "error");
