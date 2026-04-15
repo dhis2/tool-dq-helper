@@ -1306,12 +1306,9 @@ async function updateDataElements() {
         // Build select HTML — bare data elements only
         const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
             dataElements.map(function (de) {
-                const meta = dataElementMetaMap[de.id];
-                const isDefault = meta.catComboName.toLowerCase() === "default";
-                const suffix = isDefault ? " (default)" : " (" + meta.catComboName + ")";
                 const isDisabled = configuredElements.has(de.id);
                 return "<option value='" + de.id + "'" +
-                    (isDisabled ? " disabled" : "") + ">" + escapeHtml(de.name + suffix) + "</option>";
+                    (isDisabled ? " disabled" : "") + ">" + escapeHtml(de.name) + "</option>";
             })
         ).join("");
 
