@@ -6,12 +6,34 @@
 import { d2Get, d2PostJson, d2PutJson } from "./js/d2api.js";
 import { templateOutlier, templateConsistency, templateCompleteness, templateCompletenessDisaggregated } from "./js/templates.js";
 import "./css/style.css";
+import TomSelect from "tom-select/dist/js/tom-select.complete.min.js";
+import "tom-select/dist/css/tom-select.css";
 
 // ============================================================
 // 2. STATE
 // ============================================================
 let baseConfig;
 let currentImport = {};
+
+// Tom Select instances keyed by element id
+const tomSelectInstances = {};
+
+function initOrRefreshTomSelect(id) {
+    // Destroy any existing instance first — innerHTML was already replaced,
+    // so TomSelect must re-read the new options from scratch.
+    if (tomSelectInstances[id]) {
+        tomSelectInstances[id].destroy();
+        delete tomSelectInstances[id];
+    }
+    const elem = document.getElementById(id);
+    if (!elem) return;
+    tomSelectInstances[id] = new TomSelect(elem, {
+        create: false,
+        allowEmptyOption: true,
+        maxOptions: null,
+        sortField: null // preserve DOM order (already sorted upstream)
+    });
+}
 
 // ============================================================
 // 3. UTILITY HELPERS
@@ -558,6 +580,7 @@ async function makeSelectOuLevel() {
             "Level " + lvl.level + " - " + lvl.displayName + suffix + "</option>";
     }
     el("selectOuLevel").innerHTML = htmlCode;
+    initOrRefreshTomSelect("selectOuLevel");
 }
 
 function previewPossible() {
@@ -1307,6 +1330,7 @@ function bindFormEvents() {
 async function prepInputs() {
     const htmlCode = await makeSelect("dataSets", "?paging=false");
     el("selectDataSet").innerHTML = htmlCode;
+    initOrRefreshTomSelect("selectDataSet");
 
     // Hide completeness section initially
     el("completenessSection").style.display = "none";
@@ -1371,6 +1395,7 @@ async function updateDataElements() {
         ).join("");
 
         el("selectDataElement").innerHTML = dataElementHtml;
+        initOrRefreshTomSelect("selectDataElement");
         // Reset downstream selects
         el("selectDisaggregation").innerHTML = "";
         el("disaggregationSection").style.display = "none";
@@ -1389,6 +1414,11 @@ function updateDisaggregation() {
     if (!meta || meta.catComboName.toLowerCase() === "default") {
         el("disaggregationSection").style.display = "none";
         el("selectDisaggregation").innerHTML = "";
+        // Destroy any TomSelect on the disaggregation select when it's cleared
+        if (tomSelectInstances["selectDisaggregation"]) {
+            tomSelectInstances["selectDisaggregation"].destroy();
+            delete tomSelectInstances["selectDisaggregation"];
+        }
         el("completenessSection").style.display = "none";
         return;
     }
@@ -1405,6 +1435,7 @@ function updateDisaggregation() {
     });
 
     el("selectDisaggregation").innerHTML = options.join("");
+    initOrRefreshTomSelect("selectDisaggregation");
     el("disaggregationSection").style.display = "";
     // Completeness section only appears after user picks "__total__" (see updateCompletenessVisibility)
     el("completenessSection").style.display = "none";
