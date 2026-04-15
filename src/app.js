@@ -27,11 +27,40 @@ function initOrRefreshTomSelect(id) {
     }
     const elem = document.getElementById(id);
     if (!elem) return;
+
+    // Pull the placeholder text from the empty-value option (our convention is
+    // "<option value=''>[Select X]</option>") and hide that option from the
+    // dropdown so it doesn't render as a selectable row alongside the user's
+    // typed search. Keeping allowEmptyOption=true preserves the empty-string
+    // state for the native select + our downstream previewPossible() checks.
+    let placeholder = "";
+    const emptyOpt = elem.querySelector("option[value='']");
+    if (emptyOpt) {
+        placeholder = emptyOpt.textContent;
+        emptyOpt.setAttribute("data-hidden", "true");
+    }
+
     tomSelectInstances[id] = new TomSelect(elem, {
         create: false,
         allowEmptyOption: true,
         maxOptions: null,
-        sortField: null // preserve DOM order (already sorted upstream)
+        sortField: null, // preserve DOM order (already sorted upstream)
+        placeholder: placeholder,
+        hidePlaceholder: false,
+        render: {
+            option: function (data, escape) {
+                // Hide the empty-value "[Select X]" row from the dropdown
+                if (data.value === "") return "";
+                return "<div>" + escape(data.text) + "</div>";
+            },
+            item: function (data, escape) {
+                // When the empty option is the current value, render nothing
+                // so the placeholder stays visible instead of the "[Select X]"
+                // label leaking onto the control while typing.
+                if (data.value === "") return "";
+                return "<div>" + escape(data.text) + "</div>";
+            }
+        }
     });
 }
 
@@ -185,9 +214,14 @@ function collectTemplateEntries() {
             for (var e = 0; e < entries.length; e++) {
                 var entry = entries[e];
                 if (entry.id && entry.id.indexOf("\u00a7") === 0) {
+                    // Predictors have no top-level description; their human-readable
+                    // description lives in generator.description.
+                    var descTemplate = entry.description
+                        || (entry.generator && entry.generator.description)
+                        || null;
                     map[entry.id] = {
                         name: entry.name,
-                        description: entry.description,
+                        description: descTemplate,
                         shortName: entry.shortName,
                         kind: kind.slice(0, -1) // "dataElement" | "predictor" | "indicator"
                     };
@@ -333,6 +367,12 @@ async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMa
 
     // Gate 2: Edit-time — batch-fetch items, check lastUpdated - created < 5000ms
     var endpointByKind = { dataElement: "dataElements", predictor: "predictors", indicator: "indicators" };
+    // Predictor descriptions live in generator.description, not top-level.
+    var fieldsByKind = {
+        dataElement: "id,name,description,created,lastUpdated",
+        predictor: "id,name,generator[description],created,lastUpdated",
+        indicator: "id,name,description,created,lastUpdated"
+    };
     var fetchedByKind = {}; // kind -> { id -> item }
     var kindsPresent = {};
     for (var ci = 0; ci < candidates.length; ci++) {
@@ -341,7 +381,7 @@ async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMa
     for (var kind in kindsPresent) {
         var ids = candidates.filter(function (c) { return c.kind === kind; }).map(function (c) { return c.id; });
         var endpoint = endpointByKind[kind];
-        var result = await d2Get("/api/" + endpoint + "?filter=id:in:[" + ids.join(",") + "]&fields=id,name,description,created,lastUpdated&paging=false");
+        var result = await d2Get("/api/" + endpoint + "?filter=id:in:[" + ids.join(",") + "]&fields=" + fieldsByKind[kind] + "&paging=false");
         var items = result[endpoint] || [];
         var itemMap = {};
         for (var ii = 0; ii < items.length; ii++) {
@@ -372,20 +412,29 @@ async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMa
     if (failures.length > 0) return { ok: false, failures: failures };
 
     // Gate 3: Template match — name and description must match the template regex
+    // Predictors' description lives in generator.description; other kinds use top-level.
     for (var tmi = 0; tmi < candidates.length; tmi++) {
         var tmc = candidates[tmi];
         var tmItem = fetchedByKind[tmc.kind][tmc.id];
         var tmpl = templateMap[tmc.placeholderKey];
-        if (!tmpl) {
+        if (!tmpl || !tmpl.name) {
             failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "no template found for placeholder" });
             continue;
         }
         var nameRegex = templateToRegex(tmpl.name);
-        var descRegex = templateToRegex(tmpl.description);
         if (!nameRegex.test(tmItem.name || "")) {
             failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "name no longer matches template" });
-        } else if (!descRegex.test(tmItem.description || "")) {
-            failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "description no longer matches template" });
+            continue;
+        }
+        // Description check only if the template has one
+        if (tmpl.description) {
+            var currentDesc = tmc.kind === "predictor"
+                ? ((tmItem.generator && tmItem.generator.description) || "")
+                : (tmItem.description || "");
+            var descRegex = templateToRegex(tmpl.description);
+            if (!descRegex.test(currentDesc)) {
+                failures.push({ id: tmc.id, placeholderKey: tmc.placeholderKey, kind: tmc.kind, reason: "description no longer matches template" });
+            }
         }
     }
     if (failures.length > 0) return { ok: false, failures: failures };
@@ -402,10 +451,29 @@ async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMa
     if (dryRunPayload.predictors.length === 0) delete dryRunPayload.predictors;
     if (dryRunPayload.indicators.length === 0) delete dryRunPayload.indicators;
 
-    var dryRunResult = await d2PostJson(
-        "/api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE",
-        dryRunPayload
-    );
+    var dryRunResult;
+    try {
+        dryRunResult = await d2PostJson(
+            "/api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE",
+            dryRunPayload
+        );
+    } catch (dryRunErr) {
+        // DHIS2 returns 4xx when the import report contains conflicts; d2PostJson
+        // throws with only the top-level message and we lose the per-item detail.
+        // Be conservative: if the dry-run cannot succeed, treat every candidate in
+        // this check as "referenced elsewhere" and surface the generic DHIS2
+        // message for the first failure.
+        for (var drEi = 0; drEi < candidates.length; drEi++) {
+            var drEc = candidates[drEi];
+            failures.push({
+                id: drEc.id,
+                placeholderKey: drEc.placeholderKey,
+                kind: drEc.kind,
+                reason: "referenced elsewhere (dry-run: " + dryRunErr.message + ")"
+            });
+        }
+        return { ok: false, failures: failures };
+    }
 
     // Walk typeReports to find errors
     var typeReports = (dryRunResult && dryRunResult.typeReports) || [];
