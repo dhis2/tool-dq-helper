@@ -954,14 +954,14 @@ async function deleteConfig(deId, deName) {
                 const completeness = await d2Get("/api/dataStore/dqConfig/completeness");
 
                 // Find and collect metadata IDs to remove from groups
-                const baseId = deId.split(".")[0];
+                const deIdBase = deId.split(".")[0];
 
                 // Process outliers
                 const outlierEntry = outliers.find(function (item) {
-                    return Object.keys(item)[0] === baseId;
+                    return Object.keys(item)[0] === deId;
                 });
                 if (outlierEntry) {
-                    const config = outlierEntry[baseId];
+                    const config = outlierEntry[deId];
                     // Remove from groups
                     const deIds = [
                         config["\u00a7DE_NOUTLIER_COUNT\u00a7"],
@@ -995,10 +995,10 @@ async function deleteConfig(deId, deName) {
 
                 // Process consistency
                 const consistencyEntry = consistency.find(function (item) {
-                    return Object.keys(item)[0] === baseId;
+                    return Object.keys(item)[0] === deId;
                 });
                 if (consistencyEntry) {
-                    const config = consistencyEntry[baseId];
+                    const config = consistencyEntry[deId];
                     const deIds = [
                         config["\u00a7DE_CONS_ALL\u00a7"],
                         config["\u00a7DE_CONS_ANY\u00a7"]
@@ -1018,7 +1018,7 @@ async function deleteConfig(deId, deName) {
                 // Process completeness — match on both exact key and base ID
                 const completenessEntry = completeness.find(function (item) {
                     const key = Object.keys(item)[0];
-                    return key === baseId || key.split(".")[0] === baseId;
+                    return key === deId || key.split(".")[0] === deIdBase;
                 });
                 if (completenessEntry) {
                     const key = Object.keys(completenessEntry)[0];
@@ -1033,14 +1033,14 @@ async function deleteConfig(deId, deName) {
 
                 // Remove entries from dataStore arrays
                 const newOutliers = outliers.filter(function (item) {
-                    return Object.keys(item)[0] !== baseId;
+                    return Object.keys(item)[0] !== deId;
                 });
                 const newConsistency = consistency.filter(function (item) {
-                    return Object.keys(item)[0] !== baseId;
+                    return Object.keys(item)[0] !== deId;
                 });
                 const newCompleteness = completeness.filter(function (item) {
                     const key = Object.keys(item)[0];
-                    return key !== baseId && key.split(".")[0] !== baseId;
+                    return !(key === deId || key.split(".")[0] === deIdBase);
                 });
 
                 await d2PutJson("/api/dataStore/dqConfig/outliers", newOutliers);
