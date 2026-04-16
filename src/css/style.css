@@ -591,11 +591,18 @@ body {
     margin-bottom: 4px;
 }
 
-/* 21. Filter Inputs (searchable selects)
+/* 21. Searchable Selects (filter input + listbox)
    ========================================================================== */
 .dhis2-filter-input {
     margin-bottom: 4px;
     font-size: 13px;
     padding: 6px 10px;
     color: var(--dhis2-text-secondary);
+}
+
+/* Native selects with size attribute render as a scrollable listbox.
+   Cap height so they don't dominate the form. */
+.dhis2-select[size] {
+    max-height: 180px;
+    overflow-y: auto;
 }

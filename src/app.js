@@ -13,9 +13,12 @@ import "./css/style.css";
 let baseConfig;
 let currentImport = {};
 
-// Searchable select: bind a filter <input> to a <select> so typing
-// hides non-matching options. The filter input must have
-// data-filter-for="{selectId}". Call once per pair (idempotent).
+// Searchable select: bind a filter <input> to a native <select> so
+// typing removes non-matching options. Uses DOM add/remove instead of
+// option.hidden (which Safari doesn't support on <option>). The select
+// is rendered with size="8" to show a scrollable listbox.
+const selectFilterState = {}; // selectId → { allOptions: HTMLOptionElement[], filterEl }
+
 function bindSelectFilter(filterId, selectId) {
     const filterEl = document.getElementById(filterId);
     const selectEl = document.getElementById(selectId);
@@ -24,32 +27,44 @@ function bindSelectFilter(filterId, selectId) {
     if (filterEl.dataset.bound) return;
     filterEl.dataset.bound = "1";
 
-    // Store all options once the select is first populated; refresh on
-    // each call to resetSelectFilter().
+    // Snapshot current options (will be refreshed by resetSelectFilter)
+    selectFilterState[selectId] = {
+        allOptions: Array.from(selectEl.options).map(function (o) { return o.cloneNode(true); }),
+        filterEl: filterEl
+    };
+
     filterEl.addEventListener("input", function () {
         const term = filterEl.value.toLowerCase();
-        for (let i = 0; i < selectEl.options.length; i++) {
-            const opt = selectEl.options[i];
-            if (opt.value === "") {
-                // Always show the empty "[Select …]" prompt
-                opt.hidden = false;
-            } else {
-                opt.hidden = opt.textContent.toLowerCase().indexOf(term) === -1;
+        const state = selectFilterState[selectId];
+        if (!state) return;
+        const prevValue = selectEl.value;
+        // Rebuild the select with only matching options
+        selectEl.innerHTML = "";
+        state.allOptions.forEach(function (opt) {
+            if (opt.value === "" || opt.textContent.toLowerCase().indexOf(term) !== -1) {
+                selectEl.appendChild(opt.cloneNode(true));
             }
-        }
+        });
+        // Restore previous selection if it still exists
+        selectEl.value = prevValue;
     });
+
+    selectEl.setAttribute("size", "8");
 }
 
-// Clear the filter input and un-hide all options. Call after repopulating
-// the select's innerHTML.
+// Snapshot current options and clear the filter. Call after repopulating
+// the select's innerHTML (e.g. after an async fetch).
 function resetSelectFilter(filterId, selectId) {
     const filterEl = document.getElementById(filterId);
     const selectEl = document.getElementById(selectId);
     if (filterEl) filterEl.value = "";
     if (selectEl) {
-        for (let i = 0; i < selectEl.options.length; i++) {
-            selectEl.options[i].hidden = false;
-        }
+        // Re-snapshot options from the freshly populated select
+        selectFilterState[selectId] = {
+            allOptions: Array.from(selectEl.options).map(function (o) { return o.cloneNode(true); }),
+            filterEl: filterEl
+        };
+        selectEl.setAttribute("size", "8");
     }
 }
 
