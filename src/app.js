@@ -865,7 +865,7 @@ async function makeSelect(objectName, filterString) {
     let apiString = "/api/" + objectName;
     if (filterString) apiString += filterString;
     let result = await d2Get(apiString);
-    let html = "<option value=''>[Select " + objectName + "]</option>";
+    let html = "";
     for (const obj of result[objectName]) {
         html += "<option value='" + obj.id + "'>" + obj.displayName + "</option>";
     }
@@ -927,7 +927,7 @@ async function makeSelectOuLevel() {
         .filter(function (lvl) { return lvl.level > 1; })
         .sort(function (a, b) { return a.level - b.level; });
 
-    let htmlCode = "<option value=''>[Select organisationUnitLevels]</option>";
+    let htmlCode = "";
     for (const lvl of allLevels) {
         const isAssigned = assignedLevels.has(lvl.level);
         const disabledAttr = isAssigned ? "" : " disabled";
@@ -936,6 +936,7 @@ async function makeSelectOuLevel() {
             "Level " + lvl.level + " - " + lvl.displayName + suffix + "</option>";
     }
     el("selectOuLevel").innerHTML = htmlCode;
+    el("selectOuLevel").selectedIndex = -1;
     resetSelectFilter("filterOuLevel", "selectOuLevel");
 }
 
@@ -1746,9 +1747,14 @@ function bindFormEvents() {
     bindSelectFilter("filterOuLevel", "selectOuLevel");
 
     el("selectDataSet").addEventListener("change", async function () {
-        await updateDataElements();
-        await makeSelectOuLevel();
-        previewPossible();
+        showLoading();
+        try {
+            await updateDataElements();
+            await makeSelectOuLevel();
+            previewPossible();
+        } finally {
+            hideLoading();
+        }
     });
 
     // Data element change → show/hide disaggregation select
@@ -1780,6 +1786,7 @@ function bindFormEvents() {
 async function prepInputs() {
     const htmlCode = await makeSelect("dataSets", "?paging=false");
     el("selectDataSet").innerHTML = htmlCode;
+    el("selectDataSet").selectedIndex = -1;
     resetSelectFilter("filterDataSet", "selectDataSet");
 
     // Hide completeness section initially
@@ -1870,9 +1877,10 @@ function updateDisaggregation() {
         return;
     }
 
+    // Only annotate when the category combo is overridden by the data set
     const sourceLabel = meta.source === "data set override"
         ? " — from data set override"
-        : " — from data element";
+        : "";
     const options = [
         "<option value='__total__'>Total (all disaggregations combined)" + escapeHtml(sourceLabel) + "</option>"
     ];
