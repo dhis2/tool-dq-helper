@@ -591,29 +591,11 @@ body {
     margin-bottom: 4px;
 }
 
-/* 21. Tom Select overrides — DHIS2 theme
+/* 21. Filter Inputs (searchable selects)
    ========================================================================== */
-.ts-control {
-    border: 1px solid #a0adba !important;
-    border-radius: var(--dhis2-radius) !important;
-    padding: 4px 8px !important;
-    font-family: inherit !important;
-    font-size: 14px !important;
-    min-height: 38px;
-}
-
-.ts-wrapper.focus .ts-control {
-    border-color: var(--dhis2-primary) !important;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1) !important;
-}
-
-.ts-dropdown {
-    font-family: inherit;
-    font-size: 14px;
-    border: 1px solid var(--dhis2-border);
-}
-
-.ts-dropdown .active {
-    background: var(--dhis2-primary-light);
-    color: var(--dhis2-primary-dark);
+.dhis2-filter-input {
+    margin-bottom: 4px;
+    font-size: 13px;
+    padding: 6px 10px;
+    color: var(--dhis2-text-secondary);
 }

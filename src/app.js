@@ -6,8 +6,6 @@
 import { d2Get, d2PostJson, d2PutJson } from "./js/d2api.js";
 import { templateOutlier, templateConsistency, templateCompleteness, templateCompletenessDisaggregated } from "./js/templates.js";
 import "./css/style.css";
-import TomSelect from "tom-select/dist/js/tom-select.complete.min.js";
-import "tom-select/dist/css/tom-select.css";
 
 // ============================================================
 // 2. STATE
@@ -15,39 +13,44 @@ import "tom-select/dist/css/tom-select.css";
 let baseConfig;
 let currentImport = {};
 
-// Tom Select instances keyed by element id
-const tomSelectInstances = {};
+// Searchable select: bind a filter <input> to a <select> so typing
+// hides non-matching options. The filter input must have
+// data-filter-for="{selectId}". Call once per pair (idempotent).
+function bindSelectFilter(filterId, selectId) {
+    const filterEl = document.getElementById(filterId);
+    const selectEl = document.getElementById(selectId);
+    if (!filterEl || !selectEl) return;
+    // Avoid double-binding
+    if (filterEl.dataset.bound) return;
+    filterEl.dataset.bound = "1";
 
-function initOrRefreshTomSelect(id) {
-    // Destroy any existing instance first — innerHTML was already replaced,
-    // so TomSelect must re-read the new options from scratch.
-    if (tomSelectInstances[id]) {
-        tomSelectInstances[id].destroy();
-        delete tomSelectInstances[id];
-    }
-    const elem = document.getElementById(id);
-    if (!elem) return;
-
-    // Our option templates use "<option value=''>[Select X]</option>" to give
-    // native selects a visible prompt. Tom Select would render that text as
-    // the current selection (because allowEmptyOption=true keeps empty valid)
-    // and it leaks into the control alongside the search input. Strip the
-    // text from the empty option and hoist it onto the placeholder config so
-    // Tom Select shows it in the proper placeholder slot instead.
-    let placeholder = "";
-    const emptyOpt = elem.querySelector("option[value='']");
-    if (emptyOpt) {
-        placeholder = emptyOpt.textContent;
-        emptyOpt.textContent = "";
-    }
-
-    tomSelectInstances[id] = new TomSelect(elem, {
-        create: false,
-        allowEmptyOption: true,
-        maxOptions: null,
-        sortField: null, // preserve DOM order (already sorted upstream)
-        placeholder: placeholder
+    // Store all options once the select is first populated; refresh on
+    // each call to resetSelectFilter().
+    filterEl.addEventListener("input", function () {
+        const term = filterEl.value.toLowerCase();
+        for (let i = 0; i < selectEl.options.length; i++) {
+            const opt = selectEl.options[i];
+            if (opt.value === "") {
+                // Always show the empty "[Select …]" prompt
+                opt.hidden = false;
+            } else {
+                opt.hidden = opt.textContent.toLowerCase().indexOf(term) === -1;
+            }
+        }
     });
+}
+
+// Clear the filter input and un-hide all options. Call after repopulating
+// the select's innerHTML.
+function resetSelectFilter(filterId, selectId) {
+    const filterEl = document.getElementById(filterId);
+    const selectEl = document.getElementById(selectId);
+    if (filterEl) filterEl.value = "";
+    if (selectEl) {
+        for (let i = 0; i < selectEl.options.length; i++) {
+            selectEl.options[i].hidden = false;
+        }
+    }
 }
 
 // ============================================================
@@ -911,7 +914,7 @@ async function makeSelectOuLevel() {
             "Level " + lvl.level + " - " + lvl.displayName + suffix + "</option>";
     }
     el("selectOuLevel").innerHTML = htmlCode;
-    initOrRefreshTomSelect("selectOuLevel");
+    resetSelectFilter("filterOuLevel", "selectOuLevel");
 }
 
 function previewPossible() {
@@ -1714,6 +1717,12 @@ async function editOutlierThreshold(deId, cardElement) {
 
 // One-time form event binding — call only once on initial page load
 function bindFormEvents() {
+    // Bind filter inputs to their respective selects
+    bindSelectFilter("filterDataSet", "selectDataSet");
+    bindSelectFilter("filterDataElement", "selectDataElement");
+    bindSelectFilter("filterDisaggregation", "selectDisaggregation");
+    bindSelectFilter("filterOuLevel", "selectOuLevel");
+
     el("selectDataSet").addEventListener("change", async function () {
         await updateDataElements();
         await makeSelectOuLevel();
@@ -1749,7 +1758,7 @@ function bindFormEvents() {
 async function prepInputs() {
     const htmlCode = await makeSelect("dataSets", "?paging=false");
     el("selectDataSet").innerHTML = htmlCode;
-    initOrRefreshTomSelect("selectDataSet");
+    resetSelectFilter("filterDataSet", "selectDataSet");
 
     // Hide completeness section initially
     el("completenessSection").style.display = "none";
@@ -1814,15 +1823,10 @@ async function updateDataElements() {
         ).join("");
 
         el("selectDataElement").innerHTML = dataElementHtml;
-        initOrRefreshTomSelect("selectDataElement");
-        // Reset downstream selects — destroy any stale Tom Select instance on
-        // selectDisaggregation before clearing innerHTML so no orphaned wrapper
-        // holds a reference to an empty native select.
-        if (tomSelectInstances["selectDisaggregation"]) {
-            tomSelectInstances["selectDisaggregation"].destroy();
-            delete tomSelectInstances["selectDisaggregation"];
-        }
+        resetSelectFilter("filterDataElement", "selectDataElement");
+        // Reset downstream selects
         el("selectDisaggregation").innerHTML = "";
+        resetSelectFilter("filterDisaggregation", "selectDisaggregation");
         el("disaggregationSection").style.display = "none";
         el("completenessSection").style.display = "none";
 
@@ -1839,11 +1843,7 @@ function updateDisaggregation() {
     if (!meta || meta.catComboName.toLowerCase() === "default") {
         el("disaggregationSection").style.display = "none";
         el("selectDisaggregation").innerHTML = "";
-        // Destroy any TomSelect on the disaggregation select when it's cleared
-        if (tomSelectInstances["selectDisaggregation"]) {
-            tomSelectInstances["selectDisaggregation"].destroy();
-            delete tomSelectInstances["selectDisaggregation"];
-        }
+        resetSelectFilter("filterDisaggregation", "selectDisaggregation");
         el("completenessSection").style.display = "none";
         return;
     }
@@ -1860,7 +1860,7 @@ function updateDisaggregation() {
     });
 
     el("selectDisaggregation").innerHTML = options.join("");
-    initOrRefreshTomSelect("selectDisaggregation");
+    resetSelectFilter("filterDisaggregation", "selectDisaggregation");
     el("disaggregationSection").style.display = "";
     // Completeness section only appears after user picks "__total__" (see updateCompletenessVisibility)
     el("completenessSection").style.display = "none";
