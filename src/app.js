@@ -1835,16 +1835,16 @@ async function updateDataElements() {
             };
         });
 
-        // Build select HTML — bare data elements only
-        const dataElementHtml = ["<option value=''>[Select data element]</option>"].concat(
-            dataElements.map(function (de) {
-                const isDisabled = configuredElements.has(de.id);
-                return "<option value='" + de.id + "'" +
-                    (isDisabled ? " disabled" : "") + ">" + escapeHtml(de.name) + "</option>";
-            })
-        ).join("");
+        // Build select HTML — bare data elements only (no "[Select…]" prompt;
+        // the label above the select already identifies the field)
+        const dataElementHtml = dataElements.map(function (de) {
+            const isDisabled = configuredElements.has(de.id);
+            return "<option value='" + de.id + "'" +
+                (isDisabled ? " disabled" : "") + ">" + escapeHtml(de.name) + "</option>";
+        }).join("");
 
         el("selectDataElement").innerHTML = dataElementHtml;
+        el("selectDataElement").selectedIndex = -1;
         resetSelectFilter("filterDataElement", "selectDataElement");
         // Reset downstream selects
         el("selectDisaggregation").innerHTML = "";
@@ -1874,7 +1874,6 @@ function updateDisaggregation() {
         ? " — from data set override"
         : " — from data element";
     const options = [
-        "<option value=''>[Select disaggregation]</option>",
         "<option value='__total__'>Total (all disaggregations combined)" + escapeHtml(sourceLabel) + "</option>"
     ];
     meta.cocs.forEach(function (coc) {
@@ -1882,6 +1881,7 @@ function updateDisaggregation() {
     });
 
     el("selectDisaggregation").innerHTML = options.join("");
+    el("selectDisaggregation").selectedIndex = -1;
     resetSelectFilter("filterDisaggregation", "selectDisaggregation");
     el("disaggregationSection").style.display = "";
     // Completeness section only appears after user picks "__total__" (see updateCompletenessVisibility)
