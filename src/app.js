@@ -893,6 +893,13 @@ function makeTable(objects, properties) {
     return htmlCode;
 }
 
+function previewTable(objects, properties) {
+    if (!objects || objects.length === 0) {
+        return "<p style=\"color: var(--dhis2-text-secondary); font-style: italic;\">N/A</p>";
+    }
+    return makeTable(objects, properties);
+}
+
 function generateResultsTable(results) {
     let htmlCode = "<table class='dhis2-table'><tr><th>Import</th><th>Status</th></tr>";
     for (const row of results) {
@@ -986,15 +993,15 @@ async function previewConfiguration() {
 
         // Outlier
         let outlierMetadata = await configureOutlierMetadata(dataElement);
-        el("dataElementPreviewOutlier").innerHTML = makeTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]);
-        el("predictorPreviewOutlier").innerHTML = makeTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewOutlier").innerHTML = makeTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
+        el("dataElementPreviewOutlier").innerHTML = previewTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]);
+        el("predictorPreviewOutlier").innerHTML = previewTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
+        el("indicatorPreviewOutlier").innerHTML = previewTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         // Consistency
         let consistencyMetadata = await configureConsistencyMetadata(dataElement);
-        el("dataElementPreviewConsistency").innerHTML = makeTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]);
-        el("predictorPreviewConsistency").innerHTML = makeTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewConsistency").innerHTML = makeTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
+        el("dataElementPreviewConsistency").innerHTML = previewTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]);
+        el("predictorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
+        el("indicatorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         // Completeness
         let completenessMetadata;
@@ -1015,9 +1022,9 @@ async function previewConfiguration() {
             completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
         }
 
-        el("dataElementPreviewCompleteness").innerHTML = makeTable(completenessMetadata["dataElements"] || [], ["name", "shortName", "description"]);
-        el("predictorPreviewCompleteness").innerHTML = makeTable(completenessMetadata["predictors"] || [], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewCompleteness").innerHTML = makeTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
+        el("dataElementPreviewCompleteness").innerHTML = previewTable(completenessMetadata["dataElements"], ["name", "shortName", "description"]);
+        el("predictorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
+        el("indicatorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         el("previewSection").style.display = "";
         el("buttonImport").disabled = false;
