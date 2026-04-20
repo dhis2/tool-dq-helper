@@ -1028,6 +1028,7 @@ async function previewConfiguration() {
         el("indicatorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         el("previewSection").style.display = "";
+        el("previewSection").scrollIntoView({ behavior: "smooth", block: "start" });
         el("buttonImport").disabled = false;
     } catch (error) {
         console.error("Preview configuration failed:", error);
