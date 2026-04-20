@@ -1638,7 +1638,7 @@ async function deleteConfig(deId, deName) {
                             var deletePayload = {};
                             deletePayload[delKind + "s"] = idsForKind;
                             try {
-                                var delResp = await d2PostJson(
+                                await d2PostJson(
                                     "/api/metadata?importStrategy=DELETE&atomicMode=ALL",
                                     deletePayload
                                 );
