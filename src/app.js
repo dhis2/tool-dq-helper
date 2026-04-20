@@ -443,58 +443,66 @@ async function evaluateCheckForDeletion(candidates, config, ownedIds, templateMa
     }
     if (failures.length > 0) return { ok: false, failures: failures };
 
-    // Gate 4: Dry-run DELETE — POST /api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE
-    var dryRunPayload = { dataElements: [], predictors: [], indicators: [] };
+    // Gate 4: Dry-run DELETE for indicators and predictors only.
+    // Data elements are skipped here because within a single check they are
+    // always referenced by the check's own indicators/predictors. DHIS2's
+    // dry-run cannot account for the fact that those referencing objects are
+    // also being deleted, so it would always flag them as "referenced
+    // elsewhere" — a false positive.  The real delete (see deleteConfig)
+    // handles this by deleting in dependency order: indicators first, then
+    // predictors, then data elements.
+    var dryRunPayload = {};
     for (var dri = 0; dri < candidates.length; dri++) {
         var drc = candidates[dri];
+        if (drc.kind === "dataElement") continue; // skip DEs — internal refs
         var pluralKind = drc.kind + "s";
+        if (!dryRunPayload[pluralKind]) dryRunPayload[pluralKind] = [];
         dryRunPayload[pluralKind].push({ id: drc.id });
     }
-    // Remove empty arrays
-    if (dryRunPayload.dataElements.length === 0) delete dryRunPayload.dataElements;
-    if (dryRunPayload.predictors.length === 0) delete dryRunPayload.predictors;
-    if (dryRunPayload.indicators.length === 0) delete dryRunPayload.indicators;
 
-    var dryRunResult;
-    try {
-        dryRunResult = await d2PostJson(
-            "/api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE",
-            dryRunPayload
-        );
-    } catch (dryRunErr) {
-        // DHIS2 returns 4xx when the import report contains conflicts; d2PostJson
-        // throws with only the top-level message and we lose the per-item detail.
-        // Be conservative: if the dry-run cannot succeed, treat every candidate in
-        // this check as "referenced elsewhere" and surface the generic DHIS2
-        // message for the first failure.
-        for (var drEi = 0; drEi < candidates.length; drEi++) {
-            var drEc = candidates[drEi];
-            failures.push({
-                id: drEc.id,
-                placeholderKey: drEc.placeholderKey,
-                kind: drEc.kind,
-                reason: "referenced elsewhere (dry-run: " + dryRunErr.message + ")"
-            });
+    // Only run dry-run if there are non-DE candidates to check
+    if (Object.keys(dryRunPayload).length > 0) {
+        var dryRunResult;
+        try {
+            dryRunResult = await d2PostJson(
+                "/api/metadata?importStrategy=DELETE&dryRun=true&atomicMode=NONE",
+                dryRunPayload
+            );
+        } catch (dryRunErr) {
+            // DHIS2 returns 4xx when the import report contains conflicts;
+            // d2PostJson throws with only the top-level message.  Mark the
+            // non-DE candidates as failed.
+            for (var drEi = 0; drEi < candidates.length; drEi++) {
+                var drEc = candidates[drEi];
+                if (drEc.kind === "dataElement") continue;
+                failures.push({
+                    id: drEc.id,
+                    placeholderKey: drEc.placeholderKey,
+                    kind: drEc.kind,
+                    reason: "referenced elsewhere (dry-run: " + dryRunErr.message + ")"
+                });
+            }
+            return { ok: false, failures: failures };
         }
-        return { ok: false, failures: failures };
-    }
 
-    // Walk typeReports to find errors
-    var typeReports = (dryRunResult && dryRunResult.typeReports) || [];
-    var errorIds = {};
-    for (var tri = 0; tri < typeReports.length; tri++) {
-        var objectReports = (typeReports[tri].objectReports || []);
-        for (var ori = 0; ori < objectReports.length; ori++) {
-            var objReport = objectReports[ori];
-            if (objReport.errorReports && objReport.errorReports.length > 0) {
-                errorIds[objReport.uid] = objReport.errorReports[0].message || "dry-run conflict";
+        // Walk typeReports to find errors
+        var typeReports = (dryRunResult && dryRunResult.typeReports) || [];
+        var errorIds = {};
+        for (var tri = 0; tri < typeReports.length; tri++) {
+            var objectReports = (typeReports[tri].objectReports || []);
+            for (var ori = 0; ori < objectReports.length; ori++) {
+                var objReport = objectReports[ori];
+                if (objReport.errorReports && objReport.errorReports.length > 0) {
+                    errorIds[objReport.uid] = objReport.errorReports[0].message || "dry-run conflict";
+                }
             }
         }
-    }
-    for (var eri = 0; eri < candidates.length; eri++) {
-        var erc = candidates[eri];
-        if (errorIds[erc.id]) {
-            failures.push({ id: erc.id, placeholderKey: erc.placeholderKey, kind: erc.kind, reason: "referenced elsewhere (" + errorIds[erc.id] + ")" });
+        for (var eri = 0; eri < candidates.length; eri++) {
+            var erc = candidates[eri];
+            if (erc.kind === "dataElement") continue;
+            if (errorIds[erc.id]) {
+                failures.push({ id: erc.id, placeholderKey: erc.placeholderKey, kind: erc.kind, reason: "referenced elsewhere (" + errorIds[erc.id] + ")" });
+            }
         }
     }
 
@@ -1603,25 +1611,34 @@ async function deleteConfig(deId, deName) {
                         }
                     }
 
-                    // Real delete per check where ok=true
+                    // Real delete per check where ok=true.
+                    // Delete in dependency order: indicators first (leaf objects),
+                    // then predictors (reference DEs as output), then data elements.
+                    // This avoids DHIS2 rejecting DE deletes because the referencing
+                    // indicators/predictors haven't been removed yet.
+                    var deleteOrder = ["indicator", "predictor", "dataElement"];
                     for (var dci = 0; dci < checkTypes.length; dci++) {
                         var dcType = checkTypes[dci];
                         if (!perCheckResults[dcType] || !perCheckResults[dcType].ok) continue;
-                        var deletePayload = { dataElements: [], predictors: [], indicators: [] };
                         var dcCandidates = perCheckResults[dcType].candidates;
-                        for (var pi = 0; pi < dcCandidates.length; pi++) {
-                            var pluralKey = dcCandidates[pi].kind + "s";
-                            deletePayload[pluralKey].push({ id: dcCandidates[pi].id });
-                        }
-                        if (deletePayload.dataElements.length === 0) delete deletePayload.dataElements;
-                        if (deletePayload.predictors.length === 0) delete deletePayload.predictors;
-                        if (deletePayload.indicators.length === 0) delete deletePayload.indicators;
 
                         try {
-                            await d2PostJson(
-                                "/api/metadata?importStrategy=DELETE&atomicMode=ALL",
-                                deletePayload
-                            );
+                            for (var doi = 0; doi < deleteOrder.length; doi++) {
+                                var delKind = deleteOrder[doi];
+                                var idsForKind = [];
+                                for (var pi = 0; pi < dcCandidates.length; pi++) {
+                                    if (dcCandidates[pi].kind === delKind) {
+                                        idsForKind.push({ id: dcCandidates[pi].id });
+                                    }
+                                }
+                                if (idsForKind.length === 0) continue;
+                                var deletePayload = {};
+                                deletePayload[delKind + "s"] = idsForKind;
+                                await d2PostJson(
+                                    "/api/metadata?importStrategy=DELETE&atomicMode=ALL",
+                                    deletePayload
+                                );
+                            }
                             perCheckResults[dcType].deleted = true;
                         } catch (delError) {
                             perCheckResults[dcType].deleted = false;
