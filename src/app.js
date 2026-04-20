@@ -2126,6 +2126,12 @@ function bindEvents() {
     // Preview button
     el("buttonPreview").addEventListener("click", previewConfiguration);
 
+    // Close button — dismiss import results and preview
+    el("buttonCloseResult").addEventListener("click", function () {
+        el("resultSection").style.display = "none";
+        el("previewSection").style.display = "none";
+    });
+
     // Form field change handlers for previewPossible validation
     el("selectDataSet").addEventListener("change", previewPossible);
     el("selectDataElement").addEventListener("change", previewPossible);
