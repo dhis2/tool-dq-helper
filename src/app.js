@@ -670,6 +670,54 @@ async function configureOutlierMetadata(deSource) {
     return outlierImport;
 }
 
+async function checkMetadataConflicts(metadata) {
+    var conflicts = new Set();
+    var checks = [
+        { type: "dataElements", endpoint: "dataElements" },
+        { type: "predictors", endpoint: "predictors" },
+        { type: "indicators", endpoint: "indicators" }
+    ];
+    for (var ci = 0; ci < checks.length; ci++) {
+        var check = checks[ci];
+        var items = metadata[check.type] || [];
+        if (items.length === 0) continue;
+
+        var names = [];
+        var shortNames = [];
+        for (var ni = 0; ni < items.length; ni++) {
+            if (items[ni].name) names.push(items[ni].name);
+            if (items[ni].shortName) shortNames.push(items[ni].shortName);
+        }
+
+        if (names.length > 0) {
+            try {
+                var nameFilter = "filter=name:in:[" + names.map(encodeURIComponent).join(",") + "]";
+                var nameResult = await d2Get("/api/" + check.endpoint + "?" + nameFilter + "&fields=name&paging=false");
+                var existingNames = nameResult[check.endpoint] || [];
+                for (var eni = 0; eni < existingNames.length; eni++) {
+                    conflicts.add("name:" + existingNames[eni].name);
+                }
+            } catch (e) {
+                console.warn("Conflict check for " + check.endpoint + " names failed:", e);
+            }
+        }
+
+        if (shortNames.length > 0) {
+            try {
+                var snFilter = "filter=shortName:in:[" + shortNames.map(encodeURIComponent).join(",") + "]";
+                var snResult = await d2Get("/api/" + check.endpoint + "?" + snFilter + "&fields=shortName&paging=false");
+                var existingSn = snResult[check.endpoint] || [];
+                for (var esi = 0; esi < existingSn.length; esi++) {
+                    conflicts.add("shortName:" + existingSn[esi].shortName);
+                }
+            } catch (e) {
+                console.warn("Conflict check for " + check.endpoint + " shortNames failed:", e);
+            }
+        }
+    }
+    return conflicts;
+}
+
 // ============================================================
 // 6. METADATA GROUP MANAGEMENT
 // ============================================================
@@ -872,7 +920,7 @@ async function makeSelect(objectName, filterString) {
     return html;
 }
 
-function makeTable(objects, properties) {
+function makeTable(objects, properties, conflicts) {
     let htmlCode = "<table class='dhis2-table'><tr>";
     for (const prop of properties) {
         htmlCode += "<th>" + prop + "</th>";
@@ -886,18 +934,23 @@ function makeTable(objects, properties) {
                 part = part.replace("]", "");
                 nestedObj = nestedObj[part];
             }
-            htmlCode += "<td>" + nestedObj + "</td>";
+            var isConflict = conflicts &&
+                (prop === "name" || prop === "shortName") &&
+                conflicts.has(prop + ":" + nestedObj);
+            var cls = isConflict ? " class=\"conflict-cell\"" : "";
+            var warning = isConflict ? " \u26a0 already exists" : "";
+            htmlCode += "<td" + cls + ">" + nestedObj + warning + "</td>";
         }
     }
     htmlCode += "</tr></table>";
     return htmlCode;
 }
 
-function previewTable(objects, properties) {
+function previewTable(objects, properties, conflicts) {
     if (!objects || objects.length === 0) {
         return "<p style=\"color: var(--dhis2-text-secondary); font-style: italic;\">N/A</p>";
     }
-    return makeTable(objects, properties);
+    return makeTable(objects, properties, conflicts);
 }
 
 function generateResultsTable(results) {
@@ -994,15 +1047,9 @@ async function previewConfiguration() {
 
         // Outlier
         let outlierMetadata = await configureOutlierMetadata(dataElement);
-        el("dataElementPreviewOutlier").innerHTML = previewTable(outlierMetadata["dataElements"], ["name", "shortName", "description"]);
-        el("predictorPreviewOutlier").innerHTML = previewTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewOutlier").innerHTML = previewTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         // Consistency
         let consistencyMetadata = await configureConsistencyMetadata(dataElement);
-        el("dataElementPreviewConsistency").innerHTML = previewTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"]);
-        el("predictorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
 
         // Completeness
         let completenessMetadata;
@@ -1023,9 +1070,44 @@ async function previewConfiguration() {
             completenessMetadata = await configureCompletenessMetadata(dataElement, dataSet);
         }
 
-        el("dataElementPreviewCompleteness").innerHTML = previewTable(completenessMetadata["dataElements"], ["name", "shortName", "description"]);
-        el("predictorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["predictors"], ["name", "shortName", "generator[expression]"]);
-        el("indicatorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"]);
+        // Check for name/shortName conflicts across all generated metadata
+        var allMetadata = {
+            dataElements: [].concat(
+                currentImport.outlierImport.dataElements || [],
+                currentImport.consistencyImport.dataElements || [],
+                currentImport.completenessImport.dataElements || []
+            ),
+            predictors: [].concat(
+                currentImport.outlierImport.predictors || [],
+                currentImport.consistencyImport.predictors || [],
+                currentImport.completenessImport.predictors || []
+            ),
+            indicators: [].concat(
+                currentImport.outlierImport.indicators || [],
+                currentImport.consistencyImport.indicators || [],
+                currentImport.completenessImport.indicators || []
+            )
+        };
+        var conflicts = await checkMetadataConflicts(allMetadata);
+
+        el("dataElementPreviewOutlier").innerHTML = previewTable(outlierMetadata["dataElements"], ["name", "shortName", "description"], conflicts);
+        el("predictorPreviewOutlier").innerHTML = previewTable(outlierMetadata["predictors"], ["name", "shortName", "generator[expression]"], conflicts);
+        el("indicatorPreviewOutlier").innerHTML = previewTable(outlierMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"], conflicts);
+
+        el("dataElementPreviewConsistency").innerHTML = previewTable(consistencyMetadata["dataElements"], ["name", "shortName", "description"], conflicts);
+        el("predictorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["predictors"], ["name", "shortName", "generator[expression]"], conflicts);
+        el("indicatorPreviewConsistency").innerHTML = previewTable(consistencyMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"], conflicts);
+
+        el("dataElementPreviewCompleteness").innerHTML = previewTable(completenessMetadata["dataElements"], ["name", "shortName", "description"], conflicts);
+        el("predictorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["predictors"], ["name", "shortName", "generator[expression]"], conflicts);
+        el("indicatorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"], conflicts);
+
+        if (conflicts.size > 0) {
+            showNotification(
+                conflicts.size + " name/shortName conflict(s) found \u2014 highlighted in preview. Import may fail or create duplicates.",
+                "warning"
+            );
+        }
 
         el("previewSection").style.display = "";
         el("previewSection").scrollIntoView({ behavior: "smooth", block: "start" });

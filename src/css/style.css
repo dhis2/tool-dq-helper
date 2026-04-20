@@ -553,6 +553,12 @@ body {
     color: var(--dhis2-error);
 }
 
+.conflict-cell {
+    background: var(--dhis2-warning-bg);
+    color: var(--dhis2-warning);
+    font-weight: 500;
+}
+
 /* Spacing for the import button (bottom of preview section) */
 #buttonImport {
     margin-top: 20px;
