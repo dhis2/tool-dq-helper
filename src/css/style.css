@@ -559,6 +559,13 @@ body {
     font-weight: 500;
 }
 
+.conflict-legend {
+    margin-left: 12px;
+    font-size: 13px;
+    color: var(--dhis2-warning);
+    font-weight: 500;
+}
+
 /* Spacing for the import button (bottom of preview section) */
 #buttonImport {
     margin-top: 20px;

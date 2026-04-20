@@ -938,7 +938,7 @@ function makeTable(objects, properties, conflicts) {
                 (prop === "name" || prop === "shortName") &&
                 conflicts.has(prop + ":" + nestedObj);
             var cls = isConflict ? " class=\"conflict-cell\"" : "";
-            var warning = isConflict ? " \u26a0 already exists" : "";
+            var warning = isConflict ? " \u26a0" : "";
             htmlCode += "<td" + cls + ">" + nestedObj + warning + "</td>";
         }
     }
@@ -1102,16 +1102,18 @@ async function previewConfiguration() {
         el("predictorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["predictors"], ["name", "shortName", "generator[expression]"], conflicts);
         el("indicatorPreviewCompleteness").innerHTML = previewTable(completenessMetadata["indicators"], ["name", "numeratorDescription", "numerator", "denominatorDescription", "denominator"], conflicts);
 
-        if (conflicts.size > 0) {
+        var hasConflicts = conflicts.size > 0;
+        if (hasConflicts) {
             showNotification(
-                conflicts.size + " name/shortName conflict(s) found \u2014 highlighted in preview. Import may fail or create duplicates.",
+                conflicts.size + " name/shortName conflict(s) found \u2014 highlighted in preview.",
                 "warning"
             );
         }
 
         el("previewSection").style.display = "";
         el("previewSection").scrollIntoView({ behavior: "smooth", block: "start" });
-        el("buttonImport").disabled = false;
+        el("buttonImport").disabled = hasConflicts;
+        el("importConflictWarning").style.display = hasConflicts ? "" : "none";
     } catch (error) {
         console.error("Preview configuration failed:", error);
         showNotification("Failed to preview configuration: " + error.message, "error");
