@@ -218,11 +218,13 @@ function collectTemplateEntries() {
             for (var e = 0; e < entries.length; e++) {
                 var entry = entries[e];
                 if (entry.id && entry.id.indexOf("\u00a7") === 0) {
-                    // Predictors have no top-level description; their human-readable
-                    // description lives in generator.description.
-                    var descTemplate = entry.description
-                        || (entry.generator && entry.generator.description)
-                        || null;
+                    // For predictors, Gate 3 always compares generator.description
+                    // (not the top-level description), so we must store the same
+                    // field here. Consistency predictors have BOTH a top-level
+                    // description and a generator.description with different text.
+                    var descTemplate = (kind === "predictors" && entry.generator && entry.generator.description)
+                        ? entry.generator.description
+                        : (entry.description || (entry.generator && entry.generator.description) || null);
                     map[entry.id] = {
                         name: entry.name,
                         description: descTemplate,
@@ -1622,27 +1624,32 @@ async function deleteConfig(deId, deName) {
                         if (!perCheckResults[dcType] || !perCheckResults[dcType].ok) continue;
                         var dcCandidates = perCheckResults[dcType].candidates;
 
-                        try {
-                            for (var doi = 0; doi < deleteOrder.length; doi++) {
-                                var delKind = deleteOrder[doi];
-                                var idsForKind = [];
-                                for (var pi = 0; pi < dcCandidates.length; pi++) {
-                                    if (dcCandidates[pi].kind === delKind) {
-                                        idsForKind.push({ id: dcCandidates[pi].id });
-                                    }
+                        var deleteFailed = false;
+                        var deleteFailReason = "";
+                        for (var doi = 0; doi < deleteOrder.length && !deleteFailed; doi++) {
+                            var delKind = deleteOrder[doi];
+                            var idsForKind = [];
+                            for (var pi = 0; pi < dcCandidates.length; pi++) {
+                                if (dcCandidates[pi].kind === delKind) {
+                                    idsForKind.push({ id: dcCandidates[pi].id });
                                 }
-                                if (idsForKind.length === 0) continue;
-                                var deletePayload = {};
-                                deletePayload[delKind + "s"] = idsForKind;
-                                await d2PostJson(
+                            }
+                            if (idsForKind.length === 0) continue;
+                            var deletePayload = {};
+                            deletePayload[delKind + "s"] = idsForKind;
+                            try {
+                                var delResp = await d2PostJson(
                                     "/api/metadata?importStrategy=DELETE&atomicMode=ALL",
                                     deletePayload
                                 );
+                            } catch (delError) {
+                                deleteFailed = true;
+                                deleteFailReason = delKind + "s: " + delError.message;
                             }
-                            perCheckResults[dcType].deleted = true;
-                        } catch (delError) {
-                            perCheckResults[dcType].deleted = false;
-                            perCheckResults[dcType].deleteError = delError.message;
+                        }
+                        perCheckResults[dcType].deleted = !deleteFailed;
+                        if (deleteFailed) {
+                            perCheckResults[dcType].deleteError = deleteFailReason;
                         }
                     }
 
