@@ -403,14 +403,214 @@ A mismatch on either means manual edit → skip the item in the delete pass.
 
 ---
 
+## Task 7: "Close" button after successful import
+
+**Files:**
+- Modify: `src/index.html` — add Close button inside `resultSection`
+- Modify: `src/app.js` — bind click handler
+
+**Context:** After import completes with all-OK results, the preview and result sections stay visible. Users need a way to dismiss them and return to a clean form for the next configuration. Add a "Close" button below the import results table that hides both `resultSection` and `previewSection`.
+
+- [ ] **Step 1:** In `src/index.html`, add a Close button inside the result section card, after the `resultTableContainer`:
+  ```html
+  <!-- Result section (hidden until import completes) -->
+  <div id="resultSection" style="display: none;">
+      <div class="dhis2-card" style="margin-top: 16px;">
+          <h3>Import Results</h3>
+          <div id="resultTableContainer"></div>
+          <button id="buttonCloseResult" class="dhis2-btn-secondary" style="margin-top: 16px;">Close</button>
+      </div>
+  </div>
+  ```
+
+- [ ] **Step 2:** In `src/app.js`, in `bindFormEvents()` (around line 2060), add:
+  ```javascript
+  el("buttonCloseResult").addEventListener("click", function () {
+      el("resultSection").style.display = "none";
+      el("previewSection").style.display = "none";
+  });
+  ```
+
+- [ ] **Step 3:** Smoke test: configure + preview + import → results show → click Close → both preview and results disappear, form remains intact for next use.
+
+- [ ] **Step 4:** Lint, commit.
+
+---
+
+## Task 8: Scroll to preview section after clicking Preview
+
+**Files:**
+- Modify: `src/app.js` `previewConfiguration()` around line 1030
+
+**Context:** When the user clicks Preview, the preview section appears below the form but may be out of the viewport. The user may not notice it. Scroll the preview section into view after it's shown.
+
+- [ ] **Step 1:** In `previewConfiguration()`, after `el("previewSection").style.display = "";` (line 1030), add:
+  ```javascript
+  el("previewSection").scrollIntoView({ behavior: "smooth", block: "start" });
+  ```
+
+- [ ] **Step 2:** Smoke test: fill form, click Preview, confirm page scrolls smoothly so the preview card heading is visible at top of viewport.
+
+- [ ] **Step 3:** Lint, commit.
+
+---
+
+## Task 9: Pre-import conflict checking for name and shortName
+
+**Files:**
+- Modify: `src/app.js` `previewConfiguration()` — add conflict check after metadata generation
+- Modify: `src/app.js` `makeTable()` — support optional row-level highlighting
+- Modify: `src/css/style.css` — add `.conflict-row` style
+
+**Context:** When previewing metadata, some generated objects may have `name` or `shortName` values that already exist in DHIS2 on other objects. If the user proceeds, the import will fail or create confusing duplicates. Catch these during preview and highlight conflicting rows in the preview tables so the user can see the problem before attempting import.
+
+Templates do not use `code` fields, so conflicts to check are `name` and `shortName` only.
+
+**Strategy:** After all three `configure*Metadata()` calls populate `currentImport`, collect all `name` and `shortName` values across all generated objects (dataElements, predictors, indicators). Batch-query DHIS2 for each metadata type using `filter=name:in:[...]` and `filter=shortName:in:[...]`. Any matches indicate a conflict. Annotate the preview tables so conflicting cells are highlighted, and show a warning notification summarizing the conflicts.
+
+- [ ] **Step 1:** Add a helper function `async function checkMetadataConflicts(metadata)` in section 5b (after the `configure*` functions). It receives the combined metadata object `{ dataElements: [...], predictors: [...], indicators: [...] }` and returns a `Set` of conflicting `name` and `shortName` values:
+  ```javascript
+  async function checkMetadataConflicts(metadata) {
+      const conflicts = new Set(); // Set of "type:field:value" strings
+      const checks = [
+          { type: "dataElements", endpoint: "dataElements" },
+          { type: "predictors", endpoint: "predictors" },
+          { type: "indicators", endpoint: "indicators" }
+      ];
+      for (const check of checks) {
+          const items = metadata[check.type] || [];
+          if (items.length === 0) continue;
+
+          const names = items.map(function (o) { return o.name; }).filter(Boolean);
+          const shortNames = items.map(function (o) { return o.shortName; }).filter(Boolean);
+
+          // Check name conflicts
+          if (names.length > 0) {
+              const nameFilter = "filter=name:in:[" + names.map(encodeURIComponent).join(",") + "]";
+              const result = await d2Get("/api/" + check.endpoint + "?" + nameFilter + "&fields=name&paging=false");
+              var existing = result[check.endpoint] || [];
+              for (var i = 0; i < existing.length; i++) {
+                  conflicts.add("name:" + existing[i].name);
+              }
+          }
+
+          // Check shortName conflicts
+          if (shortNames.length > 0) {
+              const snFilter = "filter=shortName:in:[" + shortNames.map(encodeURIComponent).join(",") + "]";
+              const result = await d2Get("/api/" + check.endpoint + "?" + snFilter + "&fields=shortName&paging=false");
+              var existing2 = result[check.endpoint] || [];
+              for (var j = 0; j < existing2.length; j++) {
+                  conflicts.add("shortName:" + existing2[j].shortName);
+              }
+          }
+      }
+      return conflicts;
+  }
+  ```
+
+- [ ] **Step 2:** Modify `makeTable()` to accept an optional third parameter `conflicts` (a `Set`). When rendering cells for `name` or `shortName` columns, check if the cell value is in the conflict set and add a CSS class:
+  ```javascript
+  function makeTable(objects, properties, conflicts) {
+      let htmlCode = "<table class='dhis2-table'><tr>";
+      for (const prop of properties) {
+          htmlCode += "<th>" + prop + "</th>";
+      }
+      for (const obj of objects) {
+          htmlCode += "</tr><tr>";
+          for (const prop of properties) {
+              let nestedObj = JSON.parse(JSON.stringify(obj));
+              let parts = prop.split("[");
+              for (let part of parts) {
+                  part = part.replace("]", "");
+                  nestedObj = nestedObj[part];
+              }
+              const isConflict = conflicts &&
+                  (prop === "name" || prop === "shortName") &&
+                  conflicts.has(prop + ":" + nestedObj);
+              const cls = isConflict ? " class=\"conflict-cell\"" : "";
+              const warning = isConflict ? " ⚠ already exists" : "";
+              htmlCode += "<td" + cls + ">" + nestedObj + warning + "</td>";
+          }
+      }
+      htmlCode += "</tr></table>";
+      return htmlCode;
+  }
+  ```
+
+- [ ] **Step 3:** Update `previewTable()` to pass through conflicts:
+  ```javascript
+  function previewTable(objects, properties, conflicts) {
+      if (!objects || objects.length === 0) {
+          return "<p style=\"color: var(--dhis2-text-secondary); font-style: italic;\">N/A</p>";
+      }
+      return makeTable(objects, properties, conflicts);
+  }
+  ```
+
+- [ ] **Step 4:** In `previewConfiguration()`, after all three `configure*Metadata()` calls and before rendering preview tables, merge all generated metadata and run conflict check:
+  ```javascript
+  // Merge all generated metadata for conflict check
+  const allMetadata = {
+      dataElements: [
+          ...(currentImport.outlierImport.dataElements || []),
+          ...(currentImport.consistencyImport.dataElements || []),
+          ...(currentImport.completenessImport.dataElements || [])
+      ],
+      predictors: [
+          ...(currentImport.outlierImport.predictors || []),
+          ...(currentImport.consistencyImport.predictors || []),
+          ...(currentImport.completenessImport.predictors || [])
+      ],
+      indicators: [
+          ...(currentImport.outlierImport.indicators || []),
+          ...(currentImport.consistencyImport.indicators || []),
+          ...(currentImport.completenessImport.indicators || [])
+      ]
+  };
+  const conflicts = await checkMetadataConflicts(allMetadata);
+  ```
+  Then pass `conflicts` to every `previewTable()` call:
+  ```javascript
+  el("dataElementPreviewOutlier").innerHTML = previewTable(outlierMetadata["dataElements"], ["name", "shortName", "description"], conflicts);
+  ```
+  (Same for all 9 preview table calls.)
+
+- [ ] **Step 5:** If conflicts are found, show a warning notification:
+  ```javascript
+  if (conflicts.size > 0) {
+      showNotification(
+          conflicts.size + " name/shortName conflict(s) found — highlighted in preview. Import may fail or create duplicates.",
+          "warning"
+      );
+  }
+  ```
+
+- [ ] **Step 6:** Add `.conflict-cell` CSS in `src/css/style.css` (section 19, Results):
+  ```css
+  .conflict-cell {
+      background: var(--dhis2-warning-bg);
+      color: var(--dhis2-warning);
+      font-weight: 500;
+  }
+  ```
+
+- [ ] **Step 7:** Smoke test:
+  - Import a config, then try to configure the same DE again → preview should highlight all name/shortName cells.
+  - Configure a DE that has never been configured → no highlights.
+  - Confirm import button is NOT disabled by conflicts (user may proceed knowingly).
+
+- [ ] **Step 8:** Lint, build, commit.
+
+---
+
 ## Sequencing
 
-Tasks 1, 2, 3 are small independent fixes — can ship in one commit each.
-Task 4 is standalone.
-Task 5 is standalone.
-Task 6 depends on 1 (shares the `deleteConfig` flow) — do after 1.
+Tasks 1–6 are the original round 2 fixes (all implemented).
 
-Recommended order: **1 → 2 → 3 → 4 → 5 → 6**.
+Tasks 7, 8 are small independent fixes — can ship in one commit each.
+Task 9 is standalone but larger.
+
+Recommended order: **7 → 8 → 9**.
 
 ## Out of scope
 
@@ -418,3 +618,4 @@ Recommended order: **1 → 2 → 3 → 4 → 5 → 6**.
 - Bulk metadata cleanup for orphaned items not tied to a current config.
 - Fuzzy template matching (whitespace-tolerant, etc.) — strict equality is the spec.
 - Migration of existing dataStore entries — nothing changes on disk for older configs.
+- `code` field conflict checking — templates do not set `code` on any generated metadata.
