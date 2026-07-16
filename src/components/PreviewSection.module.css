@@ -1,0 +1,31 @@
+.checkSection {
+    margin-bottom: var(--spacers-dp24);
+}
+
+.checkHeading {
+    margin: var(--spacers-dp16) 0 var(--spacers-dp8) 0;
+    color: var(--colors-grey900);
+}
+
+.tableLabel {
+    margin: var(--spacers-dp12) 0 var(--spacers-dp4) 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--colors-grey700);
+}
+
+.emptyTable {
+    color: var(--colors-grey600);
+    font-style: italic;
+    font-size: 13px;
+    margin: var(--spacers-dp4) 0;
+}
+
+.table {
+    overflow-x: auto;
+}
+
+.conflictCell {
+    background: var(--colors-red100) !important;
+    color: var(--colors-red900);
+}

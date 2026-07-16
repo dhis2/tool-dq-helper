@@ -1,0 +1,10 @@
+.panel {
+    background: var(--colors-white);
+    border-radius: 4px;
+    box-shadow: var(--elevations-e100);
+    padding: var(--spacers-dp16);
+}
+
+.narrow {
+    max-width: 720px;
+}

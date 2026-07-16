@@ -1,10 +1,12 @@
+node_modules
+build
+.d2
+.pnpm-store
+src/locales
 .tmp
 compiled
-build
-manifest.webapp
-node_modules
-.vscode
 bin
-d2auth.json
+.vscode
 .superpowers/
 .DS_Store
+/.playwright-cli

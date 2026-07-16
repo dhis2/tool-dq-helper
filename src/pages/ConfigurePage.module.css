@@ -1,0 +1,35 @@
+.section {
+    margin-top: var(--spacers-dp16);
+}
+
+.formField {
+    margin-bottom: var(--spacers-dp16);
+    max-width: 480px;
+}
+
+.radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacers-dp8);
+    margin-bottom: var(--spacers-dp8);
+}
+
+.tableLabel {
+    margin: var(--spacers-dp12) 0 var(--spacers-dp4) 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--colors-grey700);
+}
+
+.conflictLegend {
+    color: var(--colors-red700);
+    font-size: 13px;
+    margin-inline-start: var(--spacers-dp12);
+}
+
+.actions {
+    margin-top: var(--spacers-dp16);
+    display: flex;
+    align-items: center;
+    gap: var(--spacers-dp8);
+}

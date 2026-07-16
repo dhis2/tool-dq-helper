@@ -1,0 +1,12 @@
+.content {
+    line-height: 1.5;
+}
+
+.content ul,
+.content ol {
+    padding-inline-start: var(--spacers-dp24);
+}
+
+.content li {
+    margin-bottom: var(--spacers-dp4);
+}
