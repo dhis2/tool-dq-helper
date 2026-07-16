@@ -1,0 +1,100 @@
+.summary {
+    margin-bottom: var(--spacers-dp16);
+    color: var(--colors-grey700);
+    font-size: 14px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: var(--spacers-dp16);
+    align-items: start;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacers-dp8);
+    margin-bottom: var(--spacers-dp8);
+}
+
+.cardTitle h4 {
+    margin: 0 0 var(--spacers-dp4) 0;
+}
+
+.cardMeta {
+    color: var(--colors-grey600);
+    font-size: 13px;
+}
+
+.cardActions {
+    display: flex;
+    gap: var(--spacers-dp8);
+    flex-shrink: 0;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacers-dp4);
+    margin-bottom: var(--spacers-dp8);
+}
+
+.details {
+    margin-top: var(--spacers-dp8);
+}
+
+.details summary {
+    cursor: pointer;
+    color: var(--colors-grey700);
+    font-size: 13px;
+    margin-bottom: var(--spacers-dp8);
+}
+
+.configSection {
+    margin: var(--spacers-dp8) 0 var(--spacers-dp16) 0;
+}
+
+.configSection h5 {
+    margin: 0 0 var(--spacers-dp4) 0;
+    color: var(--colors-grey800);
+}
+
+.settings {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--spacers-dp4) var(--spacers-dp12);
+    margin: 0 0 var(--spacers-dp8) 0;
+    font-size: 13px;
+}
+
+.settings dt {
+    color: var(--colors-grey600);
+}
+
+.settings dd {
+    margin: 0;
+}
+
+.editForm {
+    margin-top: var(--spacers-dp12);
+    padding-top: var(--spacers-dp12);
+    border-top: 1px solid var(--colors-grey300);
+}
+
+.editHint {
+    margin-top: var(--spacers-dp8);
+    font-size: 13px;
+    color: var(--colors-grey600);
+}
+
+.editActions {
+    display: flex;
+    gap: var(--spacers-dp8);
+    margin-top: var(--spacers-dp8);
+}
+
+.metadataTable {
+    font-size: 12px;
+}

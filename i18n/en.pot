@@ -1,0 +1,408 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: i18next-conv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"POT-Creation-Date: 2026-07-16T05:41:39.678Z\n"
+"PO-Revision-Date: 2026-07-16T05:41:39.680Z\n"
+
+msgid "Add new"
+msgstr "Add new"
+
+msgid "Configuration"
+msgstr "Configuration"
+
+msgid "Instructions"
+msgstr "Instructions"
+
+msgid "Import step"
+msgstr "Import step"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Failed to load app"
+msgstr "Failed to load app"
+
+msgid "Initialisation complete."
+msgstr "Initialisation complete."
+
+msgid "Initialisation failed ({{- message}})"
+msgstr "Initialisation failed ({{- message}})"
+
+msgid "Data store not initialised"
+msgstr "Data store not initialised"
+
+msgid "The app cannot be used until the data store has been initialised."
+msgstr "The app cannot be used until the data store has been initialised."
+
+msgid "Initialise now"
+msgstr "Initialise now"
+
+msgid "Initialise data store"
+msgstr "Initialise data store"
+
+msgid ""
+"The dataStore structure must be initialised before the app can be used. "
+"This will create the required metadata groups and configuration entries."
+msgstr ""
+"The dataStore structure must be initialised before the app can be used. "
+"This will create the required metadata groups and configuration entries."
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Initialise"
+msgstr "Initialise"
+
+msgid "N/A"
+msgstr "N/A"
+
+msgid "Data elements"
+msgstr "Data elements"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Short name"
+msgstr "Short name"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "Predictors"
+msgstr "Predictors"
+
+msgid "Expression"
+msgstr "Expression"
+
+msgid "Indicators"
+msgstr "Indicators"
+
+msgid "Numerator description"
+msgstr "Numerator description"
+
+msgid "Numerator"
+msgstr "Numerator"
+
+msgid "Denominator description"
+msgstr "Denominator description"
+
+msgid "Denominator"
+msgstr "Denominator"
+
+msgid "Outliers"
+msgstr "Outliers"
+
+msgid "Consistency"
+msgstr "Consistency"
+
+msgid "Completeness"
+msgstr "Completeness"
+
+msgid "Threshold must be between 2 and 4."
+msgstr "Threshold must be between 2 and 4."
+
+msgid "Excluding outliers (data element)"
+msgstr "Excluding outliers (data element)"
+
+msgid "Non-outlier count (data element)"
+msgstr "Non-outlier count (data element)"
+
+msgid "Outlier count (data element)"
+msgstr "Outlier count (data element)"
+
+msgid "Outlier values (data element)"
+msgstr "Outlier values (data element)"
+
+msgid "Outlier threshold (data element)"
+msgstr "Outlier threshold (data element)"
+
+msgid "Excluding outliers (predictor)"
+msgstr "Excluding outliers (predictor)"
+
+msgid "Non-outlier count (predictor)"
+msgstr "Non-outlier count (predictor)"
+
+msgid "Outlier count (predictor)"
+msgstr "Outlier count (predictor)"
+
+msgid "Outlier values (predictor)"
+msgstr "Outlier values (predictor)"
+
+msgid "Outlier threshold (predictor)"
+msgstr "Outlier threshold (predictor)"
+
+msgid "Excluding outliers (%)"
+msgstr "Excluding outliers (%)"
+
+msgid "Values that are outliers (%)"
+msgstr "Values that are outliers (%)"
+
+msgid "Reported all 12 months (data element)"
+msgstr "Reported all 12 months (data element)"
+
+msgid "Reported any of last 12 months (data element)"
+msgstr "Reported any of last 12 months (data element)"
+
+msgid "Reported all 12 months (predictor)"
+msgstr "Reported all 12 months (predictor)"
+
+msgid "Reported any of last 12 months (predictor)"
+msgstr "Reported any of last 12 months (predictor)"
+
+msgid "Consistent reporting (%)"
+msgstr "Consistent reporting (%)"
+
+msgid "Completeness (%)"
+msgstr "Completeness (%)"
+
+msgid "Reported any disaggregation (data element)"
+msgstr "Reported any disaggregation (data element)"
+
+msgid "Reported any disaggregation (predictor)"
+msgstr "Reported any disaggregation (predictor)"
+
+msgid "Completeness any disaggregation (%)"
+msgstr "Completeness any disaggregation (%)"
+
+msgid " — from data set override"
+msgstr " — from data set override"
+
+msgid "1 name/shortName conflict found — highlighted in preview."
+msgstr "1 name/shortName conflict found — highlighted in preview."
+
+msgid "{{total}} name/shortName conflicts found — highlighted in preview."
+msgstr "{{total}} name/shortName conflicts found — highlighted in preview."
+
+msgid "Failed to preview configuration ({{- message}})"
+msgstr "Failed to preview configuration ({{- message}})"
+
+msgid "Import failed ({{- message}})"
+msgstr "Import failed ({{- message}})"
+
+msgid "Configure data quality metadata"
+msgstr "Configure data quality metadata"
+
+msgid "All fields are required. Select a data set to begin."
+msgstr "All fields are required. Select a data set to begin."
+
+msgid "Data set"
+msgstr "Data set"
+
+msgid "No data sets match the filter"
+msgstr "No data sets match the filter"
+
+msgid "Failed to load data sets ({{- message}})"
+msgstr "Failed to load data sets ({{- message}})"
+
+msgid "Data element"
+msgstr "Data element"
+
+msgid "No data elements match the filter"
+msgstr "No data elements match the filter"
+
+msgid "Failed to load data elements ({{- message}})"
+msgstr "Failed to load data elements ({{- message}})"
+
+msgid ""
+"Only numeric data elements are listed. Data elements that are already "
+"configured are disabled."
+msgstr ""
+"Only numeric data elements are listed. Data elements that are already "
+"configured are disabled."
+
+msgid "Disaggregation"
+msgstr "Disaggregation"
+
+msgid "No disaggregations match the filter"
+msgstr "No disaggregations match the filter"
+
+msgid "Total (all disaggregations combined)"
+msgstr "Total (all disaggregations combined)"
+
+msgid "Disaggregation completeness approach"
+msgstr "Disaggregation completeness approach"
+
+msgid "Use one category option combo as proxy"
+msgstr "Use one category option combo as proxy"
+
+msgid "Count as complete when any category option combo has a value"
+msgstr "Count as complete when any category option combo has a value"
+
+msgid "Disaggregation to use as proxy"
+msgstr "Disaggregation to use as proxy"
+
+msgid "Organisation unit level"
+msgstr "Organisation unit level"
+
+msgid "No levels match the filter"
+msgstr "No levels match the filter"
+
+msgid "Failed to load organisation unit levels ({{- message}})"
+msgstr "Failed to load organisation unit levels ({{- message}})"
+
+msgid " (not assigned to data set)"
+msgstr " (not assigned to data set)"
+
+msgid "Outlier threshold (standard deviations from mean)"
+msgstr "Outlier threshold (standard deviations from mean)"
+
+msgid "Preview"
+msgstr "Preview"
+
+msgid "Import"
+msgstr "Import"
+
+msgid "already exists"
+msgstr "already exists"
+
+msgid "Import results"
+msgstr "Import results"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Confirm import"
+msgstr "Confirm import"
+
+msgid "Configure data quality metrics metadata for '{{- name}}'?"
+msgstr "Configure data quality metrics metadata for '{{- name}}'?"
+
+msgid "Identifies values that deviate significantly from the average"
+msgstr "Identifies values that deviate significantly from the average"
+
+msgid "Checks if reported values are consistent across periods"
+msgstr "Checks if reported values are consistent across periods"
+
+msgid "Monitors if data is being reported as expected"
+msgstr "Monitors if data is being reported as expected"
+
+msgid "How to use"
+msgstr "How to use"
+
+msgid "Select a data set to filter available data elements"
+msgstr "Select a data set to filter available data elements"
+
+msgid "Choose the data element you want to configure quality checks for"
+msgstr "Choose the data element you want to configure quality checks for"
+
+msgid "Use one category option as a proxy for all"
+msgstr "Use one category option as a proxy for all"
+
+msgid "Count as complete when any category has data"
+msgstr "Count as complete when any category has data"
+
+msgid "Select the organisation unit level where data is collected"
+msgstr "Select the organisation unit level where data is collected"
+
+msgid "Set the threshold for outlier detection (standard deviations from mean)"
+msgstr "Set the threshold for outlier detection (standard deviations from mean)"
+
+msgid "Click Preview to review the configuration before importing"
+msgstr "Click Preview to review the configuration before importing"
+
+msgid "Outliers ({{- sd}} SD)"
+msgstr "Outliers ({{- sd}} SD)"
+
+msgid "Show details"
+msgstr "Show details"
+
+msgid "Data element ID"
+msgstr "Data element ID"
+
+msgid "Standard deviations"
+msgstr "Standard deviations"
+
+msgid "Org unit level"
+msgstr "Org unit level"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "UID"
+msgstr "UID"
+
+msgid "New outlier threshold (standard deviations)"
+msgstr "New outlier threshold (standard deviations)"
+
+msgid "Save"
+msgstr "Save"
+
+msgid ""
+"To change data element or org unit level, remove and re-create the "
+"configuration."
+msgstr ""
+"To change data element or org unit level, remove and re-create the "
+"configuration."
+
+msgid "Outlier threshold updated to {{- sd}} SD."
+msgstr "Outlier threshold updated to {{- sd}} SD."
+
+msgid "Failed to update threshold ({{- message}})"
+msgstr "Failed to update threshold ({{- message}})"
+
+msgid "Failed to remove configuration ({{- message}})"
+msgstr "Failed to remove configuration ({{- message}})"
+
+msgid "Failed to load configurations"
+msgstr "Failed to load configurations"
+
+msgid "No data elements configured yet."
+msgstr "No data elements configured yet."
+
+msgid "Go to the"
+msgstr "Go to the"
+
+msgid "tab to get started."
+msgstr "tab to get started."
+
+msgid "1 data element configured"
+msgstr "1 data element configured"
+
+msgid "{{total}} data elements configured"
+msgstr "{{total}} data elements configured"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Remove"
+msgstr "Remove"
+
+msgid "⚠ 1 missing metadata"
+msgstr "⚠ 1 missing metadata"
+
+msgid "⚠ {{total}} missing metadata"
+msgstr "⚠ {{total}} missing metadata"
+
+msgid "Remove configuration"
+msgstr "Remove configuration"
+
+msgid "Remove DQ configuration for '{{- name}}'?"
+msgstr "Remove DQ configuration for '{{- name}}'?"
+
+msgid ""
+"The DHIS2 metadata (data elements, predictors, indicators) will not be "
+"deleted by default."
+msgstr ""
+"The DHIS2 metadata (data elements, predictors, indicators) will not be "
+"deleted by default."
+
+msgid ""
+"Also delete the generated DHIS2 metadata (only if unreferenced, unmodified, "
+"and owned by this app)"
+msgstr ""
+"Also delete the generated DHIS2 metadata (only if unreferenced, unmodified, "
+"and owned by this app)"
+
+msgctxt "Application title"
+msgid "__MANIFEST_APP_TITLE"
+msgstr "DQ Metrics Configuration Tool"
+
+msgctxt "Application description"
+msgid "__MANIFEST_APP_DESCRIPTION"
+msgstr ""
+"Tool for system administrators to configure data quality metrics metadata "
+"(outliers, consistency, completeness)."

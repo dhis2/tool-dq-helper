@@ -1,0 +1,10 @@
+.container {
+    padding: var(--spacers-dp16);
+    background: var(--colors-grey100);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.tabBar {
+    margin-bottom: var(--spacers-dp16);
+}

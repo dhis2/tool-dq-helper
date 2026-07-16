@@ -7,43 +7,43 @@
 
 The Data Quality Configuration Helper Tool is designed to streamline the configuration and management of data quality settings within DHIS2. It provides users with easy-to-use interfaces for managing validation rules, indicators, and data integrity checks, aimed at enhancing the reliability and accuracy of data in health information systems.
 
+The app is built on the [DHIS2 App Platform](https://developers.dhis2.org/docs/app-platform/getting-started/) (React, `@dhis2/ui`, `@dhis2/app-runtime`) and supports DHIS2 2.41 and later.
 
 ## License
-© Copyright University of Oslo 2024
 
+© Copyright University of Oslo 2024
 
 ## Getting started
 
 ### Install dependencies
-To install app dependencies:
 
 ```
-yarn install
-```
-
-### Compile to zip
-To compile the app to a .zip file that can be installed in DHIS2:
-
-```
-yarn run zip
+pnpm install
 ```
 
 ### Start dev server
-To start the webpack development server:
 
 ```
-yarn start
+pnpm start --proxy https://your-dhis2-instance.example.org
 ```
 
-By default, webpack will start on port 8081, and assumes DHIS2 is running on 
-http://localhost:8080/dhis with `admin:district` as the user and password.
+The dev server starts on http://localhost:3000 with a proxy that handles
+authentication against the target DHIS2 instance.
 
-A different DHIS2 instance can be used to develop against by adding a `d2auth.json` file like this:
+### Compile to zip
+
+To compile the app to a `.zip` file that can be installed in DHIS2
+(**App Management** → **Manual install**):
 
 ```
-{
-    "baseUrl": "http://localhost:9000/dev",
-    "username": "john_doe",
-    "password": "District1!"
-}
+pnpm run build
+```
+
+The installable archive is written to `build/bundle/tool-dq-config-<version>.zip`.
+
+### Lint and format
+
+```
+pnpm run lint
+pnpm run format
 ```
