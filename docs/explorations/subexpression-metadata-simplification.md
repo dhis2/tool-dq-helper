@@ -192,9 +192,10 @@ data values when configs are deleted.
 One consistent rule across the V2 metrics: **blank when the metric's
 required inputs are missing; 0 only when genuinely computed as zero.**
 Outlier metrics require both a value and a threshold (guards above);
-consistency 0% for a facility reporting 1-11 of the last 12 months is a
-computed value and stays 0 (a facility with no report in the window is
-blank via the denominator). Population SD (`stddevPop`) is retained
+consistency requires 12 months of observable history — the denominator
+probes offsets -12..-24 and facilities without any report 12+ months back
+are blank, not 0% (facilities WITH history reporting only 1-11 of the last
+12 months read a computed 0%). Population SD (`stddevPop`) is retained
 deliberately: it matches both the legacy tool verbatim and DHIS2's built-in
 outlier statistics (`stddev_pop` in the analytics outlier columns);
 `stddevSamp` is a one-token alternative if literature-style sample SD is

@@ -470,6 +470,20 @@ const REPORTED_IN_WINDOW = OFFSETS.map(
     (offset) => `if(isNotNull(${offset}),1,0)`
 ).join('+')
 
+/**
+ * History probe: reports 12-24 months back. A facility is only assessable
+ * for "consistently reporting the last 12 months" if it was already
+ * reporting 12+ months ago — otherwise the metric is not computable
+ * (blank), rather than 0%, so facilities in their first year don't drag
+ * down aggregated consistency.
+ */
+const REPORTED_BEFORE_WINDOW = Array.from(
+    { length: 13 },
+    (_, i) => `#{§DE_SOURCE§}.periodOffset(-${i + 12})`
+)
+    .map((offset) => `if(isNotNull(${offset}),1,0)`)
+    .join('+')
+
 export const templateHybridOutlier = (): MetadataBundle => {
     return {
         dataElements: [
@@ -568,9 +582,9 @@ export const templateHybridConsistency = (): MetadataBundle => {
             {
                 annualized: false,
                 decimals: 1,
-                denominator: `subExpression(if(${REPORTED_IN_WINDOW} > 0, 1, 0))`,
+                denominator: `subExpression(if(${REPORTED_BEFORE_WINDOW} > 0 && ${REPORTED_IN_WINDOW} > 0, 1, 0))`,
                 denominatorDescription:
-                    'Orgunits reporting §NAME§ in any of the last 12 months',
+                    'Orgunits reporting §NAME§ in any of the last 12 months, with 12+ months of reporting history',
                 description:
                     'The percentage of facilities that reported §NAME§ in all the previous 12 months, out of those facilities that reported §NAME§ in any of the previous 12 months.',
                 id: '§IN_CONS_PROP_V2§',

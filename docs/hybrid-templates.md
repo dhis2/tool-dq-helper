@@ -94,7 +94,9 @@ the method is defined in exactly one place and can be changed without
 touching the indicators. The predictor uses
 `organisationUnitDescendants: DESCENDANTS`, which is equivalent to
 `SELECTED` at the data-registration level and — unlike `SELECTED` — works
-on DHIS2 2.43.
+on DHIS2 2.43. Since the only stored (data element) value is the threshold, it also
+becomes manageable to calculate this treshold with an external tool and import into
+DHIS2. This means other ways of calculating tresholds can be supported as well.
 
 ### Other configuration-level changes
 
@@ -148,12 +150,15 @@ Concretely:
    engines otherwise shared: inside subExpressions, DHIS2 replaces missing
    values with 0 except within `isNull`/`isNotNull`, so the guard must be
    explicit.)
-4. **Consistency shows 0% during a facility's first year.** "Reported in
-   all of the last 12 months" is genuinely false for a facility with less
-   than 12 months of history, so the metric reads 0% (the old version hid
-   this as a blank). Facilities with *no* report in the window remain
-   blank. If a rollout-friendly variant ("consistent since first report")
-   is ever needed, it is a metric redesign, not a template tweak.
+4. **Consistency is blank (not 0%) for facilities without 12 months of
+   history.** The denominator carries a history probe: a facility only
+   counts as assessable if it has at least one report 12-24 months back.
+   Facilities in their first year are blank and do not drag down
+   aggregated consistency (the old configuration counted them in the
+   denominator). A facility *with* history that reported only some of the
+   last 12 months reads a computed 0%. Note the probe's horizon: a
+   facility that last reported more than 24 months ago is treated as new
+   again if it resumes.
 
 ### Caveats to keep in mind
 
@@ -165,9 +170,9 @@ Concretely:
   visibly.)
 - **Doris analytics backend is not yet supported** for any subExpression
   indicator ([DHIS2-21793](https://dhis2.atlassian.net/browse/DHIS2-21793)
-  — the generated SQL is PostgreSQL-specific). Note the *old* templates were
-  already partially affected: plain completeness has used a subExpression
-  since the pre-platform tool.
+  — the generated SQL is PostgreSQL-specific). Work to address this is already
+  ongoing. Note the *old* templates were already partially affected: plain completeness 
+  has used a subExpression since the pre-platform tool.
 - **Modified-Z degeneracy:** a facility whose 12 window values are all
   identical has MAD = 0, so any increase is flagged. This is inherent to
   the method (the built-in DHIS2 outlier tools share it); the mean+SD
