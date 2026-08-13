@@ -51,8 +51,13 @@ confirmed empirically):
   the *reporting* period. The same DE may be referenced any number of times
   with different offsets.
 - Facilities with no data in the queried window produce no row (like a
-  predictor with `SKIP_IF_ALL_VALUES_MISSING`); comparisons with missing
-  values are `null` → the `else` branch of `if()` applies.
+  predictor with `SKIP_IF_ALL_VALUES_MISSING`). **But within a group that
+  does exist, null item values are replaced with 0 — except inside
+  `isNull()`/`isNotNull()`** (`DimItemDataElementAndOperand
+  .replaceDataElementNulls`). A comparison like `#{x} > #{threshold}` with a
+  missing threshold therefore evaluates as `x > 0` = true, NOT as
+  null→else. Any multi-item comparison must be explicitly guarded with
+  `isNotNull(...)` on every item whose absence should mean "unassessable".
 - `if()` compiles to SQL `CASE`, which short-circuits — nested `if()` is the
   safe way to guard divisions (never rely on `&&` evaluation order).
 - The expression language has `^` (power) but no `sqrt()` — use `^0.5`.
@@ -112,11 +117,14 @@ sd        = ((sumX2/n - mean*mean) ^ 0.5)          -- population SD, same as std
 threshold = (mean + k*sd)
 ```
 
-**"Values that are outliers (%)"** — one indicator:
+**"Values that are outliers (%)"** — one indicator (hybrid form shown;
+both numerator and denominator are guarded on value AND threshold
+existence, so a facility's thresholdless first months are blank rather
+than 100%-outlier — see the null-replacement bullet in §1):
 
 ```
-numerator:   subExpression(if(n > 0, if(#{DE} > threshold, 1, 0), 0))
-denominator: subExpression(if(isNotNull(#{DE}), 1, 0))
+numerator:   subExpression(if(isNotNull(#{DE}) && isNotNull(#{THR}), if(#{DE} > #{THR}, 1, 0), 0))
+denominator: subExpression(if(isNotNull(#{DE}) && isNotNull(#{THR}), 1, 0))
 ```
 
 **"Excluding outliers (%)"** — one indicator:
@@ -178,6 +186,19 @@ The pure-indicator version also removes the *operational* pain: no predictor
 job scheduling, no "predictors ran but analytics didn't" staleness (predictor
 outputs only appear after the *next* analytics run), and no orphaned output
 data values when configs are deleted.
+
+### Null/zero rule adopted (2026-08-13)
+
+One consistent rule across the V2 metrics: **blank when the metric's
+required inputs are missing; 0 only when genuinely computed as zero.**
+Outlier metrics require both a value and a threshold (guards above);
+consistency 0% for a facility reporting 1-11 of the last 12 months is a
+computed value and stays 0 (a facility with no report in the window is
+blank via the denominator). Population SD (`stddevPop`) is retained
+deliberately: it matches both the legacy tool verbatim and DHIS2's built-in
+outlier statistics (`stddev_pop` in the analytics outlier columns);
+`stddevSamp` is a one-token alternative if literature-style sample SD is
+preferred.
 
 ## 3. Semantic differences found (all validated)
 

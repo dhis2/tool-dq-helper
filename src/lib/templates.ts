@@ -488,10 +488,15 @@ export const templateHybridOutlier = (): MetadataBundle => {
         indicators: [
             {
                 annualized: false,
+                // Guarded on the threshold too: a value without a threshold
+                // (e.g. a facility's first months) is unassessable, not an
+                // outlier — inside subExpressions DHIS2 replaces null items
+                // with 0 except within isNull/isNotNull, so an unguarded
+                // comparison would flag every thresholdless value.
                 denominator:
-                    'subExpression(if(isNotNull(#{§DE_SOURCE§}), 1, 0))',
+                    'subExpression(if(isNotNull(#{§DE_SOURCE§}) && isNotNull(#{§DE_THRESHOLD_V2§}), 1, 0))',
                 denominatorDescription:
-                    'Orgunits reporting §NAME§ this month',
+                    'Orgunits reporting §NAME§ this month with an outlier threshold',
                 description:
                     'The percentage of orgunits (facilities) reporting a §NAME§ value this month whose value is an outlier, i.e. above the outlier threshold (§THRESHOLD_DESC§).',
                 id: '§IN_OUTLIER_PROP_V2§',
@@ -500,14 +505,15 @@ export const templateHybridOutlier = (): MetadataBundle => {
                 },
                 name: 'DQ - §NAME§ values that are outliers (%)',
                 numerator:
-                    'subExpression(if(#{§DE_SOURCE§} > #{§DE_THRESHOLD_V2§}, 1, 0))',
+                    'subExpression(if(isNotNull(#{§DE_SOURCE§}) && isNotNull(#{§DE_THRESHOLD_V2§}), if(#{§DE_SOURCE§} > #{§DE_THRESHOLD_V2§}, 1, 0), 0))',
                 numeratorDescription: '§NAME§ outlier count',
                 shortName: '§SHORTNAME§ outlier (%)',
             },
             {
                 annualized: false,
-                denominator: '#{§DE_SOURCE§}',
-                denominatorDescription: '§NAME§',
+                denominator:
+                    'subExpression(if(isNotNull(#{§DE_SOURCE§}) && isNotNull(#{§DE_THRESHOLD_V2§}), #{§DE_SOURCE§}, 0))',
+                denominatorDescription: '§NAME§ (values with an outlier threshold)',
                 description:
                     '§NAME§ excluding values that are outliers, as a percentage of all §NAME§ values. Outliers are values above the outlier threshold (§THRESHOLD_DESC§). This indicator gives an indication of the significance/impact of outliers for the data element; a value of 100% means that there are no outliers.',
                 id: '§IN_NOUTLIER_PROP_V2§',
@@ -516,7 +522,7 @@ export const templateHybridOutlier = (): MetadataBundle => {
                 },
                 name: 'DQ - §NAME§ excluding outliers (%)',
                 numerator:
-                    'subExpression(if(#{§DE_SOURCE§} <= #{§DE_THRESHOLD_V2§}, if(isNotNull(#{§DE_SOURCE§}),#{§DE_SOURCE§},0), 0))',
+                    'subExpression(if(isNotNull(#{§DE_SOURCE§}) && isNotNull(#{§DE_THRESHOLD_V2§}), if(#{§DE_SOURCE§} <= #{§DE_THRESHOLD_V2§}, #{§DE_SOURCE§}, 0), 0))',
                 numeratorDescription: '§NAME§ excluding outliers',
                 shortName: '§SHORTNAME§ excl outl (%)',
             },
