@@ -49,15 +49,22 @@ needs no org unit assignment for it) and [`dataValues.json`](dataValues.json).
    400, which may itself deserve a friendlier error). Opening the attached favorite
    `zzBUGviz001` in Data Visualizer before/after step 6 shows the app-side behaviour.
 
-## Issue B — WITHDRAWN (not reproducible)
+## Issue B (bug, ≤2.42 only): first boot of an empty database — dataSet metadata import fails until restart
 
-An earlier draft reported that dataSet metadata imports fail on the first boot of an
-empty database with
-`"not-null property references a null or transient value : DataSet.periodType"`
-until the instance is restarted. On re-testing, a fresh blank **2.43.1** accepts the
-identical import on the very first boot with no restart (verified 2026-07-17, and
-independently confirmed by a second tester). The failure was observed exactly once, on
-one blank 2.40.12 instance (where it persisted across retries within that boot and was
-cleared by a restart) — most likely a timing/second-level-cache artifact of that
-specific deployment flow (WAR deployed into an already-running Tomcat). Not filed;
-kept here only so nobody re-reports it from our earlier notes.
+On the very first boot of an empty database, `POST /api/metadata` containing a
+`dataSets` payload fails with
+`"not-null property references a null or transient value : DataSet.periodType"`,
+persisting across retries within that boot; one restart clears it permanently.
+
+Version picture (all fresh empty databases, WAR deployed into a running Tomcat):
+
+- **2.40.12: reproduced** (2026-07-17)
+- **2.42.5.2: reproduced** (2026-08-13)
+- **2.43.0.1 and 2.43.1: NOT reproducible** — first-boot imports succeed
+  (verified 2026-07-17, independently confirmed by a second tester). The 2.43
+  data-entry/periodtype rewrite appears to have fixed it.
+
+Likely a stale periodtype cache: the `periodtype` table is populated during the
+same first boot, and a Hibernate-level cache retains the pre-population state
+until restart. Worth filing against supported 2.40/2.41/2.42 patch lines;
+workaround is simply to restart once after initialising an empty database.
