@@ -417,7 +417,16 @@ export const OverviewPage = ({
                             )}
                         </div>
 
+                        {/* Remount (and thereby collapse) the details when
+                            edit mode toggles, so the threshold form below is
+                            not pushed out of view by an expanded details
+                            section */}
                         <ConfigDetails
+                            key={
+                                editingId === element.id
+                                    ? 'editing'
+                                    : 'viewing'
+                            }
                             element={element}
                             ouLevelNames={ouLevelNames}
                         />
