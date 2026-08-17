@@ -14,15 +14,15 @@ The app has three tabs:
 
 ## The three DQ metrics
 
-| Metric | What it measures | Generated metadata |
-|---|---|---|
-| **Outliers** | Values above a per-org-unit outlier threshold, computed monthly from the previous 12 months (modified Z-score or mean + SD). | 1 data element, 1 predictor, 2 indicators |
-| **Consistency** | Whether an org unit reports in all / any of the last 12 months. | 1 indicator |
-| **Completeness** | 100 × (org units reporting) / (reports expected). | 1 indicator |
+| Metric           | What it measures                                                                                                             | Generated metadata                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Outliers**     | Values above a per-org-unit outlier threshold, computed monthly from the previous 12 months (modified Z-score or mean + SD). | 1 data element, 1 predictor, 2 indicators |
+| **Consistency**  | Whether an org unit reports in all / any of the last 12 months.                                                              | 1 indicator                               |
+| **Completeness** | 100 × (org units reporting) / (reports expected).                                                                            | 1 indicator                               |
 
 Six objects in total per configured data element. The consistency and completeness metrics are pure indicators — they compute their per-facility logic at analytics query time using indicator `subExpression()` (available since DHIS2 2.40.2), so they need no scheduled job and never go stale. Only the outlier threshold is a stored value written by a predictor, because its calculation (median/MAD or mean/SD over a 12-month window) cannot be expressed in an indicator.
 
-> Versions up to 1.0 of this tool instead generated a chain of up to 8 predictors and 8 intermediate data elements per configuration. Configurations created that way keep working and remain viewable, editable and removable in the app. See `hybrid-templates.md` for the rationale and the (small, deliberate) output differences.
+> The pre-platform (vanilla JS) versions of this tool instead generated a chain of up to 8 predictors and 8 intermediate data elements per configuration. Configurations created that way keep working and remain viewable, editable and removable in the app. See `hybrid-templates.md` for the rationale and the (small, deliberate) output differences.
 
 The generated items are added to app-managed DHIS2 metadata groups so the app can track them for later edit/remove.
 
@@ -69,12 +69,12 @@ Only levels that the data set is assigned to are enabled. Levels the data set is
 
 ### 6. Set the outlier threshold
 
-The threshold value *k* depends on the method:
+The threshold value _k_ depends on the method:
 
-| Method | Default | Permitted range |
-|---|---|---|
-| Modified Z-score | 3.5 | 2.5 – 5.0 |
-| Standard deviations from mean | 3.0 | 2.0 – 4.0 |
+| Method                        | Default | Permitted range |
+| ----------------------------- | ------- | --------------- |
+| Modified Z-score              | 3.5     | 2.5 – 5.0       |
+| Standard deviations from mean | 3.0     | 2.0 – 4.0       |
 
 Both in 0.1 steps. Switching method resets the value to that method's default.
 
@@ -125,7 +125,7 @@ You can switch to the Configuration or Instructions tab at any point — the for
 ### After the import: scheduling and analytics
 
 - The **consistency and completeness indicators** work as soon as the next analytics run completes — nothing to schedule.
-- The **outlier metrics** additionally need the threshold predictor to run. Schedule a *predictor* job (Scheduler app) covering the predictor group **"DQ - Data quality predictors (thresholds)"** (or "(all)"), typically nightly before the analytics job. There is only one predictor per configuration and no ordering constraints between predictors. Outlier values appear after the first predictor run followed by an analytics run.
+- The **outlier metrics** additionally need the threshold predictor to run. Schedule a _predictor_ job (Scheduler app) covering the predictor group **"DQ - Data quality predictors (thresholds)"** (or "(all)"), typically nightly before the analytics job. There is only one predictor per configuration and no ordering constraints between predictors. Outlier values appear after the first predictor run followed by an analytics run.
 
 ---
 
@@ -138,7 +138,7 @@ The **Configuration** tab lists every data element that has at least one DQ conf
 Each card shows:
 
 - The data element name and parent data set
-- Chips indicating which metrics are configured. The outliers chip includes the method and threshold, e.g. **Outliers (modified-Z 3.5)** or **Outliers (mean + 3 SD)**; configurations from tool versions ≤ 1.0 show **Outliers (3 SD)**.
+- Chips indicating which metrics are configured. The outliers chip includes the method and threshold, e.g. **Outliers (modified-Z 3.5)** or **Outliers (mean + 3 SD)**; configurations from the pre-platform tool show **Outliers (3 SD)**.
 - **Edit** and **Remove** buttons
 - **Show details** to expand a per-metric breakdown of every metadata object's UID
 
@@ -154,17 +154,17 @@ If any metadata object referenced by a configuration has been deleted outside th
 
 ## Editing a configuration
 
-Click **Edit** on a card to change the outlier threshold. A small inline form appears under the card (an expanded details section collapses automatically so the form is visible). The form uses the ranges of the configuration's own method — you can change the *k* value, but not switch method; to change method, data element, or organisation unit level, remove the configuration and re-create it.
+Click **Edit** on a card to change the outlier threshold. A small inline form appears under the card (an expanded details section collapses automatically so the form is visible). The form uses the ranges of the configuration's own method — you can change the _k_ value, but not switch method; to change method, data element, or organisation unit level, remove the configuration and re-create it.
 
 ![Inline edit form for outlier threshold](images/user-manual/11-edit-form.png)
 
 Saving will:
 
-1. Update the threshold predictor's generator expression to use the new *k*
+1. Update the threshold predictor's generator expression to use the new _k_
 2. Update the names and descriptions of the threshold data element, the predictor, and the two outlier indicators to reflect the new threshold text
 3. Save the new threshold to the DataStore entry
 
-Already-stored threshold values keep the old *k* until the predictor job next runs.
+Already-stored threshold values keep the old _k_ until the predictor job next runs.
 
 ---
 
@@ -198,7 +198,7 @@ When deleting metadata the app issues three separate DELETE calls per metric, in
 
 This avoids DHIS2 refusing a single-payload delete because a data element is still referenced by the indicators/predictors being deleted alongside it.
 
-On DHIS2 2.43, deleting the outlier-threshold **data element** can additionally be blocked by the *data value changelog* once the predictor has run (past predicted values reference the data element in the audit trail). The app reports this as a delete failure for that object type; the indicators and predictor are still deleted.
+On DHIS2 2.43, deleting the outlier-threshold **data element** can additionally be blocked by the _data value changelog_ once the predictor has run (past predicted values reference the data element in the audit trail). The app reports this as a delete failure for that object type; the indicators and predictor are still deleted.
 
 ### Result notification
 
@@ -225,7 +225,7 @@ A short in-app reference covering the same material in brief.
 - **DataStore** — a per-namespace key/value store DHIS2 exposes at `/api/dataStore`. This app stores its configs in the `dqConfig` namespace under three keys (`outliers`, `consistency`, `completeness`), each holding a list of per-DE entries.
 - **Predictor** — a DHIS2 object that runs a formula over historical data and writes the result to a designated data element. Only the outlier threshold relies on a predictor.
 - **Indicator** — a DHIS2 formula that combines numerator and denominator expressions into a calculated value. Used here to express percentages.
-- **subExpression()** — an indicator expression function (DHIS2 2.40.2+) that evaluates its content once per data-registration org unit and period before aggregating. It is what lets the consistency, completeness, and outlier indicators count *facilities* ("did this facility report?", "is this facility's value above its threshold?") without any stored intermediate values.
+- **subExpression()** — an indicator expression function (DHIS2 2.40.2+) that evaluates its content once per data-registration org unit and period before aggregating. It is what lets the consistency, completeness, and outlier indicators count _facilities_ ("did this facility report?", "is this facility's value above its threshold?") without any stored intermediate values.
 - **Category option combo (CoC)** — a specific combination of category options. Disaggregated data elements store a value per CoC; the "default" CoC represents the undisaggregated total.
 
 ---
@@ -234,7 +234,7 @@ A short in-app reference covering the same material in brief.
 
 - Requires DHIS2 **2.40.2 or later** (multi-item `subExpression()` with `periodOffset`); the app's declared minimum version is 2.41.
 - Only monthly data sets are fully automated. Configuring against a non-monthly data set emits a warning; the generated expressions must be adjusted by hand.
-- **Use the generated indicators in monthly layouts only.** The 12-month windows inside the indicators follow the *query's* period type: in a quarterly chart the consistency indicator silently means "last 12 quarters". (The threshold predictor itself is always monthly.)
+- **Use the generated indicators in monthly layouts only.** The 12-month windows inside the indicators follow the _query's_ period type: in a quarterly chart the consistency indicator silently means "last 12 quarters". (The threshold predictor itself is always monthly.)
 - Instances running the **Doris analytics backend** are not yet supported — subExpression indicators generate PostgreSQL-specific SQL ([DHIS2-21793](https://dhis2.atlassian.net/browse/DHIS2-21793)).
 - Only the outlier threshold value can be edited in place; any other change requires remove + re-create.
 - Cross-instance portability is not supported — the DataStore stores UIDs, which differ between instances. Exporting metadata and importing to another instance will orphan the references.
