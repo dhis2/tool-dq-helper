@@ -14,7 +14,7 @@ predictors, no output data elements and no scheduled job, from DHIS2
 instances (blank 2.40.12, 2.41.9 and 2.43.0.1) against both hand-computed
 values and the app's current predictor-based configuration running on the
 same data. Two significant DHIS2 2.43 platform bugs were discovered along the
-way; one of them breaks the app's *current* predictor-based output on 2.43.
+way; one of them breaks the app's _current_ predictor-based output on 2.43.
 
 ---
 
@@ -25,11 +25,11 @@ logic (counting reporting facilities) or cross-period windows (12-month
 mean/SD, consistency). Three core changes make indicators able to do this
 directly:
 
-| Change | Ticket | Ships in |
-|---|---|---|
+| Change                                                                                    | Ticket      | Ships in                         |
+| ----------------------------------------------------------------------------------------- | ----------- | -------------------------------- |
 | subExpression may reference **multiple items**, including multiple distinct data elements | DHIS2-15083 | 2.41.0, **backported to 2.40.2** |
-| **periodOffset** allowed *inside* subExpression | DHIS2-15874 | 2.41.0, **backported to 2.40.2** |
-| Boolean aggregation fix in subExpression | DHIS2-15936 | 2.41.0 |
+| **periodOffset** allowed _inside_ subExpression                                           | DHIS2-15874 | 2.41.0, **backported to 2.40.2** |
+| Boolean aggregation fix in subExpression                                                  | DHIS2-15936 | 2.41.0                           |
 
 The published docs (even for 2.43) still say a subExpression "may reference
 only one data element" — that text is outdated. The only validation in the
@@ -44,17 +44,17 @@ confirmed empirically):
   results are aggregated up the hierarchy (SUM by default; override with
   `.aggregationType(...)` after the closing parenthesis).
 - `#{DE}` inside a subExpression is the **facility total across category
-  option combos** — so `if(isNotNull(#{DE}),1,0)` counts *facilities*, not
+  option combos** — so `if(isNotNull(#{DE}),1,0)` counts _facilities_, not
   category combo values. This is exactly the "reported for any
   disaggregation" semantic the completeness predictor exists for.
 - `#{DE}.periodOffset(-n)` refers to the facility's value n periods before
-  the *reporting* period. The same DE may be referenced any number of times
+  the _reporting_ period. The same DE may be referenced any number of times
   with different offsets.
 - Facilities with no data in the queried window produce no row (like a
   predictor with `SKIP_IF_ALL_VALUES_MISSING`). **But within a group that
   does exist, null item values are replaced with 0 — except inside
   `isNull()`/`isNotNull()`** (`DimItemDataElementAndOperand
-  .replaceDataElementNulls`). A comparison like `#{x} > #{threshold}` with a
+.replaceDataElementNulls`). A comparison like `#{x} > #{threshold}` with a
   missing threshold therefore evaluates as `x > 0` = true, NOT as
   null→else. Any multi-item comparison must be explicitly guarded with
   `isNotNull(...)` on every item whose absence should mean "unassessable".
@@ -79,8 +79,8 @@ Works from 2.38/2.40.0 (single item, no offsets).
 
 ### Completeness — disaggregated ("reported for any disaggregation")
 
-Currently 1 predictor + 1 output DE + 1 indicator. Replacement is the *same
-expression as the plain case* — because `#{DE}` inside subExpression is the
+Currently 1 predictor + 1 output DE + 1 indicator. Replacement is the _same
+expression as the plain case_ — because `#{DE}` inside subExpression is the
 facility total across COCs, it already counts one per facility:
 
 ```
@@ -142,7 +142,7 @@ Validated: "excluding outliers" 23.077% == predictor-based 23.077% ==
 hand-computed 30/130. Numerator expression is ~7.5 kB of text — imports,
 validates and evaluates fine. Needs 2.40.2+.
 
-**Hybrid variant** (validated as well): keep only the *threshold* predictor +
+**Hybrid variant** (validated as well): keep only the _threshold_ predictor +
 its DE, and replace the four comparison predictors with two-data-element
 subExpressions such as `subExpression(if(#{DE} > #{DE_THRESHOLD}, 1, 0))`.
 Identical results, much cheaper to query (see §5), and it keeps a visible
@@ -150,7 +150,7 @@ threshold/mirror DE for dashboards — at the cost of still needing the
 predictor job.
 
 **MAD-hybrid variant (recommended — validated exactly):** the hybrid layout
-decouples the *method* from the *metrics*: the indicators only ever compare
+decouples the _method_ from the _metrics_: the indicators only ever compare
 against `#{DE_THRESHOLD}`, so the outlier method is defined in exactly one
 place — the threshold predictor's generator. Replacing mean+SD with a
 modified-Z threshold:
@@ -169,22 +169,22 @@ median + 3.5·MAD/0.6745 (14.09 / 25.57 / 7.0 / 41.57), and the two indicators
 return the expected values at facility and country level (33.33% / 23.08%).
 Outliers check: 5 predictors + 5 DEs + 2 indicators → **1 + 1 + 2**.
 Caveat to document: a facility whose window values are all identical has
-MAD = 0, so its threshold collapses to the median and *any* increase is
+MAD = 0, so its threshold collapses to the median and _any_ increase is
 flagged (classic modified-Z degeneracy — the built-in tools hit the same
 thing as a division by zero). If that matters, floor the MAD term with
 `greatest(...)` or fall back to the SD method for such series.
 
 ### Object-count impact per configured data element
 
-| | predictors | output DEs | indicators | total objects | scheduled job |
-|---|---|---|---|---|---|
-| Current (all 3 checks, disaggregated DE) | 8 | 8 | 4 | 20 | required, per period |
-| Pure-indicator (mean+SD outliers) | 0 | 0 | 4 | 4 | none |
-| MAD-hybrid (modified-Z outliers, see below) | 1 | 1 | 4 | 6 | required (threshold only) |
+|                                             | predictors | output DEs | indicators | total objects | scheduled job             |
+| ------------------------------------------- | ---------- | ---------- | ---------- | ------------- | ------------------------- |
+| Current (all 3 checks, disaggregated DE)    | 8          | 8          | 4          | 20            | required, per period      |
+| Pure-indicator (mean+SD outliers)           | 0          | 0          | 4          | 4             | none                      |
+| MAD-hybrid (modified-Z outliers, see below) | 1          | 1          | 4          | 6             | required (threshold only) |
 
-The pure-indicator version also removes the *operational* pain: no predictor
+The pure-indicator version also removes the _operational_ pain: no predictor
 job scheduling, no "predictors ran but analytics didn't" staleness (predictor
-outputs only appear after the *next* analytics run), and no orphaned output
+outputs only appear after the _next_ analytics run), and no orphaned output
 data values when configs are deleted.
 
 ### Null/zero rule adopted (2026-08-13)
@@ -207,7 +207,7 @@ Differences 1-3 are **design choices** — the legacy behaviour can be
 replicated exactly with alternative expressions (each replication validated
 on the fixture). Only difference 4 is **inherent** to subExpressions.
 
-1. **Explicit zeros** *(optional)*. Predictor output DEs have
+1. **Explicit zeros** _(optional)_. Predictor output DEs have
    `zeroIsSignificant: false`, so 0-results (e.g. "not consistent", "no
    outliers") are never stored and facilities silently disappear from
    facility-level tables. The indicator versions as proposed return explicit
@@ -217,24 +217,24 @@ on the fixture). Only difference 4 is **inherent** to subExpressions.
    for non-consistent facilities disappear, matching the predictor output;
    aggregates are identical either way (SQL SUM ignores nulls, and the
    generated query filters rows where the whole subexpression is null).
-2. **Outlier-% denominator** *(optional)*. The current predictor config
-   counts a facility that did *not report at all* in the current month as a
+2. **Outlier-% denominator** _(optional)_. The current predictor config
+   counts a facility that did _not report at all_ in the current month as a
    "non-outlier" (missing value → 0 → `0 <= threshold`), inflating the
    denominator (fixture: 25.0% vs 33.3%). The proposed denominator counts
    only facilities that actually reported. To replicate the legacy
-   denominator in the MAD-hybrid, count facilities that *have a threshold*
+   denominator in the MAD-hybrid, count facilities that _have a threshold_
    instead: `subExpression(if(isNotNull(#{THR}), 1, 0))` (validates OK).
 3. **Facilities with no reporting history** that suddenly report
-   *(optional)*: flagged as outliers by the current predictors (missing
+   _(optional)_: flagged as outliers by the current predictors (missing
    threshold → 0 → any value is "above threshold"); the proposed guarded
    subExpression counts them as non-outliers. Legacy behaviour is
    replicable with `firstNonNull`:
    `subExpression(if(#{DE} > firstNonNull(#{THR}, 0), 1, 0))` (validates
    OK). Recommend the new behaviour, but it is a deliberate choice.
-4. **Non-monthly queries** *(inherent)*. The periodOffset window follows the
-   *query* period type: queried quarterly, "last 12 months" silently becomes
+4. **Non-monthly queries** _(inherent)_. The periodOffset window follows the
+   _query_ period type: queried quarterly, "last 12 months" silently becomes
    "last 12 quarters". The predictor approach queried quarterly instead
-   returns facility-*month* ratios. Both are self-consistent but different;
+   returns facility-_month_ ratios. Both are self-consistent but different;
    monthly is the designed grain for both, and this must be documented for
    users. (Fixture: Q2 2026 consistency — predictor 25.0% vs subExpression
    0.0%, both explainable.) There is no expression-level way to pin the
@@ -245,13 +245,13 @@ on the fixture). Only difference 4 is **inherent** to subExpressions.
 
 ## 4. Version matrix (all empirical, blank instances)
 
-| | 2.40.12 | 2.41.9 | 2.42 | 2.43.0.1 |
-|---|---|---|---|---|
-| Plain + disaggregated completeness (subExpression) | PASS | PASS | (source-identical) | PASS |
-| Consistency via periodOffset subExpression | PASS | PASS | (source-identical) | PASS |
-| Inline mean+SD outlier indicators | PASS | PASS | (source-identical) | PASS |
-| Hybrid (multi-DE subExpression vs threshold DE) | PASS | PASS | (source-identical) | PASS |
-| Current predictor-based config | PASS | PASS | expected PASS (old code path) | **FAIL — bug 1 below** |
+|                                                    | 2.40.12 | 2.41.9 | 2.42                          | 2.43.0.1               |
+| -------------------------------------------------- | ------- | ------ | ----------------------------- | ---------------------- |
+| Plain + disaggregated completeness (subExpression) | PASS    | PASS   | (source-identical)            | PASS                   |
+| Consistency via periodOffset subExpression         | PASS    | PASS   | (source-identical)            | PASS                   |
+| Inline mean+SD outlier indicators                  | PASS    | PASS   | (source-identical)            | PASS                   |
+| Hybrid (multi-DE subExpression vs threshold DE)    | PASS    | PASS   | (source-identical)            | PASS                   |
+| Current predictor-based config                     | PASS    | PASS   | expected PASS (old code path) | **FAIL — bug 1 below** |
 
 The subExpression engine is byte-identical between 2.41, 2.42 and 2.43
 branches (only import/refactor diffs), so 2.42 was covered by source
@@ -267,47 +267,47 @@ are visible.
 
 Query-side timings (cold analytics cache; warm cache is instant):
 
-| Query | 2.40.12 | 2.43.0.1 |
-|---|---|---|
-| Inline-stats outlier %, 1 month, aggregated | 0.26 s | 0.30 s |
-| Inline-stats outlier %, 12-month aggregate trend | 2.0 s | 2.1 s |
-| Consistency, 12-month × 1000-facility pivot | 8.0 s | 6.5 s |
-| Hybrid outlier %, 12-month × 1000-facility pivot | 9.3 s | (not repeated) |
-| **Inline-stats outlier %, 12-month × 1000-facility pivot** | **211 s** | **118 s** |
-| Predictor-DE equivalents of any of the above | ≤ 0.7 s | ≤ 0.7 s |
+| Query                                                      | 2.40.12   | 2.43.0.1       |
+| ---------------------------------------------------------- | --------- | -------------- |
+| Inline-stats outlier %, 1 month, aggregated                | 0.26 s    | 0.30 s         |
+| Inline-stats outlier %, 12-month aggregate trend           | 2.0 s     | 2.1 s          |
+| Consistency, 12-month × 1000-facility pivot                | 8.0 s     | 6.5 s          |
+| Hybrid outlier %, 12-month × 1000-facility pivot           | 9.3 s     | (not repeated) |
+| **Inline-stats outlier %, 12-month × 1000-facility pivot** | **211 s** | **118 s**      |
+| Predictor-DE equivalents of any of the above               | ≤ 0.7 s   | ≤ 0.7 s        |
 
 Interpretation: for the dashboard patterns this tool targets (monthly values,
 aggregate trend lines), pure indicators are comfortably fast. The one hazard
-is a *facility-level pivot of many months* of the heavy inline-stats
+is a _facility-level pivot of many months_ of the heavy inline-stats
 expression. If that use case matters for a deployment, the hybrid variant
 (or predictors) is the escape hatch. Note that predictors shift cost to the
 scheduled job + analytics rebuild rather than eliminating it.
 
-## 5b. Outlier *methods*: predictors vs subExpressions
+## 5b. Outlier _methods_: predictors vs subExpressions
 
 The two engines have different statistical vocabularies (verified in
 `DefaultExpressionService` registries and empirically):
 
-| Method | Predictors | subExpression indicators |
-|---|---|---|
-| Z-score, population SD (what this app uses) | ✔ `avg()` + `stddevPop()` | ✔ inline Σx/Σx² arithmetic — validated exactly equal |
-| Z-score, sample SD | ✔ `stddev()`/`stddevSamp()` | ✔ same arithmetic with n−1 |
-| Min-max (value outside historical min/max) | ✔ `min()`/`max()` | ✔ `greatest(...12 offsets...)` / `least(...)` — validated (SQL greatest/least ignore null offsets) |
-| Percentile / IQR fences (e.g. P75 + 1.5·IQR) | ✔ `percentileCont(p, …)`; combining two vector results (P75 − P25) is scalar arithmetic and safe | ✘ no order statistics over offsets |
-| Median-based / modified Z-score (median + MAD) | ✔ **with `missingValueStrategy: SKIP_IF_ANY_VALUE_MISSING`** — nested `median(greatest(#{DE}-median(#{DE}), median(#{DE})-#{DE}))` computes exact MAD for every facility incl. gappy reporters (validated: 0.5 / 3.0 / 0.0 / 3.0 = hand-computed values for 12/12, 6/12, 12/12, 11/12 reporters) | ✘ median of 12 offsets would need a sorting network of greatest/least — impractical |
-| Normal-distribution scoring | ✔ `normDistCum()`/`normDistDen()` (niche) | ✘ |
+| Method                                         | Predictors                                                                                                                                                                                                                                                                                       | subExpression indicators                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Z-score, population SD (what this app uses)    | ✔ `avg()` + `stddevPop()`                                                                                                                                                                                                                                                                        | ✔ inline Σx/Σx² arithmetic — validated exactly equal                                               |
+| Z-score, sample SD                             | ✔ `stddev()`/`stddevSamp()`                                                                                                                                                                                                                                                                      | ✔ same arithmetic with n−1                                                                         |
+| Min-max (value outside historical min/max)     | ✔ `min()`/`max()`                                                                                                                                                                                                                                                                                | ✔ `greatest(...12 offsets...)` / `least(...)` — validated (SQL greatest/least ignore null offsets) |
+| Percentile / IQR fences (e.g. P75 + 1.5·IQR)   | ✔ `percentileCont(p, …)`; combining two vector results (P75 − P25) is scalar arithmetic and safe                                                                                                                                                                                                 | ✘ no order statistics over offsets                                                                 |
+| Median-based / modified Z-score (median + MAD) | ✔ **with `missingValueStrategy: SKIP_IF_ANY_VALUE_MISSING`** — nested `median(greatest(#{DE}-median(#{DE}), median(#{DE})-#{DE}))` computes exact MAD for every facility incl. gappy reporters (validated: 0.5 / 3.0 / 0.0 / 3.0 = hand-computed values for 12/12, 6/12, 12/12, 11/12 reporters) | ✘ median of 12 offsets would need a sorting network of greatest/least — impractical                |
+| Normal-distribution scoring                    | ✔ `normDistCum()`/`normDistDen()` (niche)                                                                                                                                                                                                                                                        | ✘                                                                                                  |
 
 **Missing-data handling is controlled by the predictor's
 `missingValueStrategy`, and it decides whether median/MAD are usable**
 (validated on the fixture, same generator, three runs):
 
-| Strategy | Behaviour for vector expressions | MAD result (true: A1=0.5, A2=3, B1=0, B2=3) |
-|---|---|---|
-| `SKIP_IF_ANY_VALUE_MISSING` | sample periods with any missing item are **excluded from the vector** | 0.5 / **3.0** / 0.0 / **3.0** — exact for everyone |
+| Strategy                                                     | Behaviour for vector expressions                                                                                                  | MAD result (true: A1=0.5, A2=3, B1=0, B2=3)              |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `SKIP_IF_ANY_VALUE_MISSING`                                  | sample periods with any missing item are **excluded from the vector**                                                             | 0.5 / **3.0** / 0.0 / **3.0** — exact for everyone       |
 | `SKIP_IF_ALL_VALUES_MISSING` (what this app's templates use) | plain item references skip missing samples, but **composite expressions inside a vector function substitute 0** for missing items | 0.5 / 7.5 / 0.0 / 3.5 — contaminated for gappy reporters |
-| `NEVER_SKIP` | missing → 0 everywhere (even never-reporting facilities get a value) | 0.5 / 2.5 / 0.0 / 3.5 (+ A3=0.0) — wrong for gaps |
+| `NEVER_SKIP`                                                 | missing → 0 everywhere (even never-reporting facilities get a value)                                                              | 0.5 / 2.5 / 0.0 / 3.5 (+ A3=0.0) — wrong for gaps        |
 
-So a *predictor-based* modified Z-score is genuinely implementable: one
+So a _predictor-based_ modified Z-score is genuinely implementable: one
 predictor with `SKIP_IF_ANY_VALUE_MISSING` producing a
 `median + k·MAD/0.6745` threshold DE, then comparisons as today (or as
 two-DE subExpressions, hybrid style). The usual predictor costs — scheduled
@@ -329,7 +329,7 @@ periodOffset subExpressions give. None of these precomputed columns are
 addressable from indicator expressions.
 
 Bottom line: for the method this app implements (mean + k·SD),
-subExpressions lose nothing. Min-max is *cheap to add* as an indicator-only
+subExpressions lose nothing. Min-max is _cheap to add_ as an indicator-only
 variant. A modified Z-score variant is possible but only via predictors
 (with `SKIP_IF_ANY_VALUE_MISSING`), not as pure indicators.
 
@@ -387,7 +387,7 @@ variant. A modified Z-score variant is possible but only via predictors
    facility-pivot performance note for the outlier indicators.
 5. **File the two 2.43 Jira issues** (predictor SELECTED regression; blank
    install dataOutputPeriodTypes). Until the predictor regression is fixed,
-   2.43 deployments of the *current* app need the DESCENDANTS workaround.
+   2.43 deployments of the _current_ app need the DESCENDANTS workaround.
 
 ## 7b. Real-data validation (DHIS2 2.42.5.1 + Laos HMIS demo, 2026-07-17)
 
@@ -408,14 +408,14 @@ Dashboard: **"DQ metrics: old (predictors) vs new (subExpressions)"**
 
 Results across 12 months × (national + 18 provinces):
 
-| Comparison | Result |
-|---|---|
-| Threshold predictor outputs (legacy vs DQX), raw values | **21,250 / 21,250 exact (100%)** across all 3 DEs |
-| ANC 1 — all four checks, legacy vs DQX (and vs inline) | **100%** at national and province level |
-| Malaria — all four checks, legacy vs DQX | **100%** at national and province level |
-| DPT 3 — completeness and excluding-outliers | **100%** |
-| DPT 3 — consistency / outlier % | numerators identical (725 = 725); denominators differ by **exactly the 47 district-registered reporting units** that level-4 predictors cannot see (1,282 vs 1,235). The new approach counts real data the legacy config silently ignores. |
-| DQX (stored integer threshold) vs DQXi (inline float threshold) | differences are proven integer-rounding boundary flips (e.g. value 8 vs stored threshold 8 vs true threshold 7.70; 7 flips per ~97 facilities in the worst province-month). The inline math is strictly more accurate. |
+| Comparison                                                      | Result                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Threshold predictor outputs (legacy vs DQX), raw values         | **21,250 / 21,250 exact (100%)** across all 3 DEs                                                                                                                                                                                          |
+| ANC 1 — all four checks, legacy vs DQX (and vs inline)          | **100%** at national and province level                                                                                                                                                                                                    |
+| Malaria — all four checks, legacy vs DQX                        | **100%** at national and province level                                                                                                                                                                                                    |
+| DPT 3 — completeness and excluding-outliers                     | **100%**                                                                                                                                                                                                                                   |
+| DPT 3 — consistency / outlier %                                 | numerators identical (725 = 725); denominators differ by **exactly the 47 district-registered reporting units** that level-4 predictors cannot see (1,282 vs 1,235). The new approach counts real data the legacy config silently ignores. |
+| DQX (stored integer threshold) vs DQXi (inline float threshold) | differences are proven integer-rounding boundary flips (e.g. value 8 vs stored threshold 8 vs true threshold 7.70; 7 flips per ~97 facilities in the worst province-month). The inline math is strictly more accurate.                     |
 
 Additional operational findings from the legacy side while setting this up:
 the seed's baked-in predictor outputs included **internally impossible

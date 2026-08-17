@@ -94,9 +94,7 @@ const ConfigDetails = ({
                             ) : (
                                 config['§VAL_STDDEV§'] && (
                                     <>
-                                        <dt>
-                                            {i18n.t('Standard deviations')}
-                                        </dt>
+                                        <dt>{i18n.t('Standard deviations')}</dt>
                                         <dd>{config['§VAL_STDDEV§']}</dd>
                                     </>
                                 )
@@ -178,9 +176,7 @@ const EditThresholdForm = ({
                 label={
                     method === 'modZ'
                         ? i18n.t('New outlier threshold (modified Z-score)')
-                        : i18n.t(
-                              'New outlier threshold (standard deviations)'
-                          )
+                        : i18n.t('New outlier threshold (standard deviations)')
                 }
                 method={method}
                 value={value}
@@ -423,9 +419,7 @@ export const OverviewPage = ({
                             section */}
                         <ConfigDetails
                             key={
-                                editingId === element.id
-                                    ? 'editing'
-                                    : 'viewing'
+                                editingId === element.id ? 'editing' : 'viewing'
                             }
                             element={element}
                             ouLevelNames={ouLevelNames}

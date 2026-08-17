@@ -18,7 +18,9 @@ export const isValidThreshold = (
     method: OutlierMethod = 'sd'
 ): boolean => {
     const { min, max } = RANGE[method]
-    return Boolean(value) && parseFloat(value) >= min && parseFloat(value) <= max
+    return (
+        Boolean(value) && parseFloat(value) >= min && parseFloat(value) <= max
+    )
 }
 
 /** Number input for the outlier threshold value (k), with validation. */

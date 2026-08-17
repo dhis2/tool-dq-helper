@@ -527,7 +527,8 @@ export const templateHybridOutlier = (): MetadataBundle => {
                 annualized: false,
                 denominator:
                     'subExpression(if(isNotNull(#{§DE_SOURCE§}) && isNotNull(#{§DE_THRESHOLD_V2§}), #{§DE_SOURCE§}, 0))',
-                denominatorDescription: '§NAME§ (values with an outlier threshold)',
+                denominatorDescription:
+                    '§NAME§ (values with an outlier threshold)',
                 description:
                     '§NAME§ excluding values that are outliers, as a percentage of all §NAME§ values. Outliers are values above the outlier threshold (§THRESHOLD_DESC§). This indicator gives an indication of the significance/impact of outliers for the data element; a value of 100% means that there are no outliers.',
                 id: '§IN_NOUTLIER_PROP_V2§',
@@ -615,8 +616,7 @@ export const templateHybridCompleteness = (): MetadataBundle => {
                     id: '§IN_TYPE§',
                 },
                 name: 'DQ - §NAME§ data element completeness (%)',
-                numerator:
-                    'subExpression(if(isNotNull(#{§DE_SOURCE§}), 1, 0))',
+                numerator: 'subExpression(if(isNotNull(#{§DE_SOURCE§}), 1, 0))',
                 numeratorDescription: '§NAME§ count of reporting orgunits',
                 shortName: '§SHORTNAME§ completeness (%)',
             },

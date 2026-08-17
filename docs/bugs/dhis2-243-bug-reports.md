@@ -147,20 +147,20 @@ On dqtest (2.43.0.1, migrated DB):
 
 1. **Flat bulk imports are silently ignored.** `POST /api/dataValueSets` with
    the standard flat payload (`{"dataValues": [{dataElement, period, orgUnit,
-   categoryOptionCombo, value}, ...]}`) returns `SUCCESS` with
+categoryOptionCombo, value}, ...]}`) returns `SUCCESS` with
    `ignored: <all>` and **zero conflicts** even in `importReportMode=FULL`;
    nothing is stored. Sync and async, `force=true`, `skipAudit=true`,
    `preheatCache=false` — all identical. The complete-data-set payload form
    (`{"dataSet": ..., "period": ..., "orgUnit": ..., "dataValues": [...]}`)
    **works**. Source: `DefaultDataEntryService.upsertGroup` counts
    `store.upsertValues()` results; the store (`HibernateDataEntryStore
-   .upsertValues`, a raw JDBC `INSERT ... ON CONFLICT` inside
+.upsertValues`, a raw JDBC `INSERT ... ON CONFLICT` inside
    `session.doWork`) evidently fails or returns 0, which is reported as
    "ignored" with no conflict.
 2. **Predictor writes fail hard.** Any predictor needing to INSERT new values
    fails with `409 "Unable to predict <name>"` / devMessage `"error executing
-   work"` (the `doWork` wrapper). Predictors whose predictions are all
-   *unchanged* "succeed" (nothing is written) — which masks the problem for
+work"` (the `doWork` wrapper). Predictors whose predictions are all
+   _unchanged_ "succeed" (nothing is written) — which masks the problem for
    existing configs until source data changes.
 3. **Single-value endpoints are inconsistent.** `POST /api/dataValues` works
    for some period/orgunit combinations and returns

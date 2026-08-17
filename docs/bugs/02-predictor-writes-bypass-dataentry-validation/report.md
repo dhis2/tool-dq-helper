@@ -16,29 +16,32 @@ practice, e.g. in the WHO data quality metadata configurations).
 
 1. Log in to https://play.im.dhis2.org/stable-2-43-1 as `admin`/`district`.
 2. Import the attached [`metadata.json`](metadata.json) (same file as bug 01: two
-   output data elements *not in any data set*, two predictors):
+   output data elements _not in any data set_, two predictors):
 
-   ```
-   curl -u admin:district -X POST -H "Content-Type: application/json" \
-     "https://play.im.dhis2.org/stable-2-43-1/api/metadata?importStrategy=CREATE_AND_UPDATE&atomicMode=ALL" \
-     -d @metadata.json
-   ```
+    ```
+    curl -u admin:district -X POST -H "Content-Type: application/json" \
+      "https://play.im.dhis2.org/stable-2-43-1/api/metadata?importStrategy=CREATE_AND_UPDATE&atomicMode=ALL" \
+      -d @metadata.json
+    ```
+
 3. Run the DESCENDANTS predictor for a month with ANC data:
 
-   ```
-   curl -u admin:district -X POST \
-     "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD02/run?startDate=2026-06-01&endDate=2026-07-01"
-   ```
-   → `"Generated 1024 predictions"` — the predictor **successfully writes** 1,024
-   values for data element `zzDQbugDE02`, which belongs to no data set.
+    ```
+    curl -u admin:district -X POST \
+      "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD02/run?startDate=2026-06-01&endDate=2026-07-01"
+    ```
+
+    → `"Generated 1024 predictions"` — the predictor **successfully writes** 1,024
+    values for data element `zzDQbugDE02`, which belongs to no data set.
+
 4. Try to delete (or update) one of those predictor-written values
    (`DiszpKrYNg8` = Ngelehun CHC, or any facility returned by
    `GET /api/dataValueSets?dataElement=zzDQbugDE02&orgUnit=ImspTQPwCqd&children=true&period=202606`):
 
-   ```
-   curl -u admin:district -X DELETE \
-     "https://play.im.dhis2.org/stable-2-43-1/api/dataValues?de=zzDQbugDE02&pe=202606&ou=DiszpKrYNg8&co=HllvX50cXC0"
-   ```
+    ```
+    curl -u admin:district -X DELETE \
+      "https://play.im.dhis2.org/stable-2-43-1/api/dataValues?de=zzDQbugDE02&pe=202606&ou=DiszpKrYNg8&co=HllvX50cXC0"
+    ```
 
 ## Actual Result
 

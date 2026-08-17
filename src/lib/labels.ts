@@ -56,10 +56,7 @@ const outlierMetadataLabels = (): LabelMap => ({
         'dataElement',
         i18n.t('Outlier threshold (data element)'),
     ],
-    '§PD_THRESHOLD_V2§': [
-        'predictor',
-        i18n.t('Outlier threshold (predictor)'),
-    ],
+    '§PD_THRESHOLD_V2§': ['predictor', i18n.t('Outlier threshold (predictor)')],
     '§IN_OUTLIER_PROP_V2§': [
         'indicator',
         i18n.t('Values that are outliers (%)'),

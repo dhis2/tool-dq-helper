@@ -506,11 +506,7 @@ export const deleteConfiguration = async (
         await removeIfAny(
             'indicatorGroups',
             baseConfig.indicatorGroup,
-            configIds(config, [
-                '§IN_COMPL§',
-                '§IN_COMPL_ANY§',
-                '§IN_COMPL_V2§',
-            ])
+            configIds(config, ['§IN_COMPL§', '§IN_COMPL_ANY§', '§IN_COMPL_V2§'])
         )
     }
 

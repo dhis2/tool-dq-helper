@@ -7,14 +7,14 @@ data output period types", with app support in
 [DHIS2-21127](https://dhis2.atlassian.net/browse/DHIS2-21127) (Line Listing),
 [DHIS2-21128](https://dhis2.atlassian.net/browse/DHIS2-21128) (Dashboard)). On a fresh
 empty install the setting is empty, and Data Visualizer correctly tells the user:
-*"No period types available — No period types are enabled in the system. Please contact
-your system administrator."*
+_"No period types available — No period types are enabled in the system. Please contact
+your system administrator."_
 
 We initially chased this as an "analytics silently empty" bug; the investigation
 notes and reproduction assets are kept below because they document two things that
 still seem worth reporting.
 
-## Issue A (improvement suggestion): the analytics *API* fails silently where the apps do not
+## Issue A (improvement suggestion): the analytics _API_ fails silently where the apps do not
 
 The web apps display an actionable message. The raw API does not: with no period types
 enabled, `GET /api/analytics?dimension=dx:...&dimension=pe:202601&dimension=ou:...`

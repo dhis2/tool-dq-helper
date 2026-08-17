@@ -216,78 +216,87 @@ maybe('live: hybrid configuration lifecycle', () => {
     // Set LIVE_KEEP=1 to leave the imported configuration on the instance
     // (e.g. for manual inspection through the app) instead of deleting it.
     const itUnlessKeep = process.env.LIVE_KEEP ? it.skip : it
-    itUnlessKeep('deletes the configuration and its metadata (gates pass)', async () => {
-        // The threshold predictor wrote data values; a data element with
-        // values cannot be deleted, so clear them first (the app leaves
-        // this to the administrator — candidate future improvement).
-        const store = await api.get<StoreEntry[]>('dataStore/dqConfig/outliers')
-        const config = store[0][FIXTURE.dataElement]
-        const values = await api.get<{
-            dataValues?: Record<string, string>[]
-        }>('dataValueSets', {
-            dataElement: config['§DE_THRESHOLD_V2§'] as string,
-            orgUnit: FIXTURE.root,
-            children: 'true',
-            startDate: '2026-01-01',
-            endDate: '2026-12-31',
-        })
-        if (values.dataValues?.length) {
-            // 2.43 requires the DE to be in a data set assigned to each
-            // org unit before its values can be written or deleted, and
-            // soft-deleted rows still block data element deletion until
-            // the maintenance purge runs.
-            const facilityIds = [
-                ...new Set(values.dataValues.map((value) => value.orgUnit)),
-            ]
-            await api.post('metadata', {
-                dataSets: [
-                    {
-                        id: 'zzLiveDs001',
-                        name: 'ZZZ live test cleanup',
-                        shortName: 'ZZZ live cleanup',
-                        periodType: 'Monthly',
-                        dataSetElements: [
-                            {
-                                dataSet: { id: 'zzLiveDs001' },
-                                dataElement: {
-                                    id: config['§DE_THRESHOLD_V2§'] as string,
-                                },
-                            },
-                        ],
-                        organisationUnits: facilityIds.map((id) => ({ id })),
-                    },
-                ],
-            })
-            await api.post('dataValueSets', {
-                dataValues: values.dataValues.map((value) => ({
-                    ...value,
-                    deleted: true,
-                })),
-            })
-            await api.post(
-                'metadata',
-                { dataSets: [{ id: 'zzLiveDs001' }] },
-                { importStrategy: 'DELETE' }
+    itUnlessKeep(
+        'deletes the configuration and its metadata (gates pass)',
+        async () => {
+            // The threshold predictor wrote data values; a data element with
+            // values cannot be deleted, so clear them first (the app leaves
+            // this to the administrator — candidate future improvement).
+            const store = await api.get<StoreEntry[]>(
+                'dataStore/dqConfig/outliers'
             )
-            await api.post(
-                'maintenance',
-                {},
-                { softDeletedDataValueRemoval: 'true' }
+            const config = store[0][FIXTURE.dataElement]
+            const values = await api.get<{
+                dataValues?: Record<string, string>[]
+            }>('dataValueSets', {
+                dataElement: config['§DE_THRESHOLD_V2§'] as string,
+                orgUnit: FIXTURE.root,
+                children: 'true',
+                startDate: '2026-01-01',
+                endDate: '2026-12-31',
+            })
+            if (values.dataValues?.length) {
+                // 2.43 requires the DE to be in a data set assigned to each
+                // org unit before its values can be written or deleted, and
+                // soft-deleted rows still block data element deletion until
+                // the maintenance purge runs.
+                const facilityIds = [
+                    ...new Set(values.dataValues.map((value) => value.orgUnit)),
+                ]
+                await api.post('metadata', {
+                    dataSets: [
+                        {
+                            id: 'zzLiveDs001',
+                            name: 'ZZZ live test cleanup',
+                            shortName: 'ZZZ live cleanup',
+                            periodType: 'Monthly',
+                            dataSetElements: [
+                                {
+                                    dataSet: { id: 'zzLiveDs001' },
+                                    dataElement: {
+                                        id: config[
+                                            '§DE_THRESHOLD_V2§'
+                                        ] as string,
+                                    },
+                                },
+                            ],
+                            organisationUnits: facilityIds.map((id) => ({
+                                id,
+                            })),
+                        },
+                    ],
+                })
+                await api.post('dataValueSets', {
+                    dataValues: values.dataValues.map((value) => ({
+                        ...value,
+                        deleted: true,
+                    })),
+                })
+                await api.post(
+                    'metadata',
+                    { dataSets: [{ id: 'zzLiveDs001' }] },
+                    { importStrategy: 'DELETE' }
+                )
+                await api.post(
+                    'maintenance',
+                    {},
+                    { softDeletedDataValueRemoval: 'true' }
+                )
+            }
+            const outcome = await deleteConfiguration(api, {
+                baseConfig,
+                deId: FIXTURE.dataElement,
+                deName: 'XP cases',
+                alsoDeleteMetadata: true,
+            })
+            expect(outcome.message).toContain('Consistency metadata: deleted.')
+            expect(outcome.message).toContain('Completeness metadata: deleted.')
+            // The threshold DE is deleted when the platform allows it; on 2.43
+            // the data value changelog of predictor runs can block DE deletion
+            // (reported gracefully) — accept both outcomes.
+            expect(outcome.message).toMatch(
+                /Outliers metadata: (deleted\.|delete failed \(dataElements)/
             )
         }
-        const outcome = await deleteConfiguration(api, {
-            baseConfig,
-            deId: FIXTURE.dataElement,
-            deName: 'XP cases',
-            alsoDeleteMetadata: true,
-        })
-        expect(outcome.message).toContain('Consistency metadata: deleted.')
-        expect(outcome.message).toContain('Completeness metadata: deleted.')
-        // The threshold DE is deleted when the platform allows it; on 2.43
-        // the data value changelog of predictor runs can block DE deletion
-        // (reported gracefully) — accept both outcomes.
-        expect(outcome.message).toMatch(
-            /Outliers metadata: (deleted\.|delete failed \(dataElements)/
-        )
-    })
+    )
 })

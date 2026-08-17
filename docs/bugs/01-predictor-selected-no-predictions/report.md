@@ -9,33 +9,34 @@
 1. Log in to https://play.im.dhis2.org/stable-2-43-1 as `admin`/`district`.
 2. Import the attached [`metadata.json`](metadata.json):
 
-   ```
-   curl -u admin:district -X POST -H "Content-Type: application/json" \
-     "https://play.im.dhis2.org/stable-2-43-1/api/metadata?importStrategy=CREATE_AND_UPDATE&atomicMode=ALL" \
-     -d @metadata.json
-   ```
+    ```
+    curl -u admin:district -X POST -H "Content-Type: application/json" \
+      "https://play.im.dhis2.org/stable-2-43-1/api/metadata?importStrategy=CREATE_AND_UPDATE&atomicMode=ALL" \
+      -d @metadata.json
+    ```
 
-   This creates two output data elements and two predictors that are **identical in every
-   way** (generator `if(isNotNull(#{fbfJHSPpUQD}),1,0)` on "ANC 1st visit", Monthly,
-   org unit level Facility) **except** `organisationUnitDescendants`: one `SELECTED`,
-   one `DESCENDANTS`.
+    This creates two output data elements and two predictors that are **identical in every
+    way** (generator `if(isNotNull(#{fbfJHSPpUQD}),1,0)` on "ANC 1st visit", Monthly,
+    org unit level Facility) **except** `organisationUnitDescendants`: one `SELECTED`,
+    one `DESCENDANTS`.
 
-   Note on org units: predictors have no explicit org unit selection — they run over
-   the org units of the **user running them**, restricted to the configured
-   `organisationUnitLevels`. Here: `admin` (org unit = Sierra Leone national root,
-   `ImspTQPwCqd`) × level 4 = all facilities. Reproducing requires running as a user
-   whose org unit is **above** the predictor's level (the normal case — e.g. a
-   national-level admin or the scheduler); a user assigned directly to a facility
-   would not trigger the bug, since the level filter and the user-org-unit filter
-   would then agree (see suspected cause below).
+    Note on org units: predictors have no explicit org unit selection — they run over
+    the org units of the **user running them**, restricted to the configured
+    `organisationUnitLevels`. Here: `admin` (org unit = Sierra Leone national root,
+    `ImspTQPwCqd`) × level 4 = all facilities. Reproducing requires running as a user
+    whose org unit is **above** the predictor's level (the normal case — e.g. a
+    national-level admin or the scheduler); a user assigned directly to a facility
+    would not trigger the bug, since the level filter and the user-org-unit filter
+    would then agree (see suspected cause below).
+
 3. Run both predictors for a month that has ANC data (June 2026 at the time of testing):
 
-   ```
-   curl -u admin:district -X POST \
-     "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD01/run?startDate=2026-06-01&endDate=2026-07-01"
-   curl -u admin:district -X POST \
-     "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD02/run?startDate=2026-06-01&endDate=2026-07-01"
-   ```
+    ```
+    curl -u admin:district -X POST \
+      "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD01/run?startDate=2026-06-01&endDate=2026-07-01"
+    curl -u admin:district -X POST \
+      "https://play.im.dhis2.org/stable-2-43-1/api/predictors/zzDQbugPD02/run?startDate=2026-06-01&endDate=2026-07-01"
+    ```
 
 ## Actual Result
 
@@ -54,7 +55,7 @@ silently dead since its upgrade).
 
 Both predictors should generate ~1,024 predictions (one per facility reporting
 ANC 1st visit in June 2026). `SELECTED` vs `DESCENDANTS` should only control whether
-data registered *below* the selected level is aggregated up — for data registered at
+data registered _below_ the selected level is aggregated up — for data registered at
 facility level and a facility-level predictor they are equivalent.
 
 ## Why this is not the documented SELECTED behaviour
@@ -63,7 +64,7 @@ The documented semantics of `organisationUnitDescendants`
 ([DHIS2-9833](https://dhis2.atlassian.net/browse/DHIS2-9833),
 [community discussion](https://community.dhis2.org/t/dhis2-predictor/53583/17)) are
 about **which levels provide data**: SELECTED legitimately yields 0 predictions when
-data is registered *below* the predictor's selected level (e.g. district-level
+data is registered _below_ the predictor's selected level (e.g. district-level
 predictor, facility-level data). This report is a different situation, verified on the
 play instance:
 
